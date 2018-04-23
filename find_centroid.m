@@ -1,4 +1,4 @@
-% find_centroid.m
+% find_centroid.m 
 %
 % Given a list of points (specified by their coordinates), find the 
 % centre of mass and output its coordinates.
