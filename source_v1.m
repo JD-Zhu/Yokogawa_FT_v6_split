@@ -321,8 +321,14 @@ function source_v1
         
         %% Create VE for each ROI
         
-        % if using Centroid method, need some preparation (warping centres of mass into subject space)
-        pos_grid = prepare_for_Centroid_method(templates_dir, mri);
+        % if using Centroid method for collapsing vertices in ROI, need to do the following:
+        
+        % compute the centroid of each ROI
+% double for loops (see below)
+        centroids = find_centroid(vertices); % list of centroids, one for each ROI (coordinates are in mm)
+% end
+        % warp centres of mass into subject space
+        pos_grid = warp_centroids(templates_dir, mri, centroids);
         % plot each ROI & its centre of mass, for quality checking
         for k = 1:length(ROIs)
             ROI_name = ROIs_label{k};
@@ -343,6 +349,8 @@ function source_v1
             for j = 1:length(ROIs{k})
                 indx        = find(ismember(sourcemodel.tissuelabel, ROIs{k}{j})); % find index of the required tissue label
                 vertices    = find(sourcemodel.tissue == indx); % find vertices that belong to this tissue label
+                %TODO: concat all vertices together (copy from SVD method fn)
+                % pass the concat version (1d array) to SVD & Centroid method fns.
                 vertices_filters_cue{j} = cat(1, source_cue_combined.avg.filter{vertices}); % for each vertex, get the spatial filter (i.e. set of weights) for it
                 vertices_filters_target{j} = cat(1, source_target_combined.avg.filter{vertices});
             end
@@ -447,14 +455,14 @@ end
 % Warp the centre of mass in each ROI (as defined in atlas) into subject space,
 % in preparation for calling create_virtual_sensor_Centroid()
 %
-% @param centre_of_mass_txtfile: path to a txt file containing coordinates of ROI centre of mass (in cm)
 % @param mri_realigned: correctly realigned MRI file
-%
+% @param centre_of_mass: list of centroids, one for each ROI (coordinates are in mm)
+% 
 % @output pos_grid: xyz-coordinates of each parcel's centre of mass, in individual space
 %
-function pos_grid = prepare_for_Centroid_method(templates_dir, mri_realigned)
+function pos_grid = warp_centroids(templates_dir, mri_realigned, centre_of_mass)
     % Load centre of mass information (in mm)
-    centre_of_mass = load([templates_dir 'Node_AAL116.txt']);
+    %centre_of_mass = load([templates_dir 'Node_AAL116.txt']);
 
     % convert mri to mm for consistency
     mri_realigned = ft_convert_units(mri_realigned, 'mm');
@@ -511,7 +519,12 @@ end
 % @param erf:           separate erf for each condition
 %
 function VE = create_virtual_sensor_Centroid(pos_grid, ROI_name, vertices, erf_combined, erf, conds)
-   
+ 
+    %TODO: centroid = find_centroid.m(vertices);
+    %      warp_centroid();
+    %      plot for quality check
+    
+    
     % Create VE by weighting data_clean_rs from centre of mass
 
     %"To generate a single regional timecourse, individual voxel signals
