@@ -25,9 +25,11 @@ function C = find_centroid (P)
     C = centroid(P(hull_points, :));
 
     % plot for quality check
+    %{
     figure; hold on;
     plot3(P(:,1),P(:,2),P(:,3),'.','MarkerSize',10); grid on; % plot all points
     trisurf(hull, P(:,1),P(:,2),P(:,3),'Facecolor','red','FaceAlpha',0.1); % plot convex hull
     plot3(C(1), C(2), C(3), '*', 'MarkerSize', 10); % plot centroid
     hold off;
+    %}
 end

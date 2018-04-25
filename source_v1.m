@@ -23,7 +23,7 @@ function source_v1
 
 
     % each cycle processes one subject
-    for h = 12:length(SubjectFolders)
+    for h = 1:length(SubjectFolders)
 
         SubjectID = SubjectFolders{h};
         SubjectFolder = [DataFolder, '\\', SubjectID];
@@ -267,7 +267,7 @@ function source_v1
 
         % Interpolate the atlas onto template sourcemodel (10mm grid),
         % because the atlas may not be at the same resolution as your grid
-        % (e.g. you created a grid with 4000 vertices, but atlas may only have 2000 vertices)
+        % (e.g. you created a grid with 6000 vertices, but atlas may only have 2000 vertices)
         cfg                  = [];
         cfg.interpmethod     = 'nearest';
         cfg.parameter        = 'tissue';
@@ -320,63 +320,47 @@ function source_v1
 
         
         %% Create VE for each ROI
-        
-        % if using Centroid method for collapsing vertices in ROI, need to do the following:
-        
-        % compute the centroid of each ROI
-% double for loops (see below)
-        centroids = find_centroid(vertices); % list of centroids, one for each ROI (coordinates are in mm)
-% end
-        % warp centres of mass into subject space
-        pos_grid = warp_centroids(templates_dir, mri, centroids);
-        % plot each ROI & its centre of mass, for quality checking
-        for k = 1:length(ROIs)
-            ROI_name = ROIs_label{k};
-            parcels_in_ROI = [];
-            for j = 1:length(ROIs{k})
-                indx = find(ismember(sourcemodel.tissuelabel, ROIs{k}{j})); % find index of the required label            
-                parcels_in_ROI = [parcels_in_ROI indx];
-            end
-            plot_ROI_centre_of_mass(ROI_name, parcels_in_ROI, pos_grid, headmodel, atlas_interpo, grid);
-        end
-        
+                
         % Each cycle deals with one ROI
         for k = 1:length(ROIs)
             ROI_name = ROIs_label{k};
             
             % for this ROI, find a list of vertices that belong to it, and
             % extract the spatial filter for each vertex in cue window & target window
+            vertices_all = []; % will hold a single list of all vertices (from all parcels belonging to this ROI)
             for j = 1:length(ROIs{k})
                 indx        = find(ismember(sourcemodel.tissuelabel, ROIs{k}{j})); % find index of the required tissue label
                 vertices    = find(sourcemodel.tissue == indx); % find vertices that belong to this tissue label
-                %TODO: concat all vertices together (copy from SVD method fn)
-                % pass the concat version (1d array) to SVD & Centroid method fns.
-                vertices_filters_cue{j} = cat(1, source_cue_combined.avg.filter{vertices}); % for each vertex, get the spatial filter (i.e. set of weights) for it
-                vertices_filters_target{j} = cat(1, source_target_combined.avg.filter{vertices});
+                % add vertices from the current parcel to the overall list
+                vertices_all = [vertices_all; vertices];
             end
+            % for each vertex, get the spatial filter (i.e. set of weights) for it
+            vertices_filters_cue = cat(1, source_cue_combined.avg.filter{vertices_all}); 
+            vertices_filters_target = cat(1, source_target_combined.avg.filter{vertices_all});
 
+            
             % create virtual sensor for this ROI in cue window
-            VE = create_virtual_sensor_Centroid(pos_grid, ROI_name, vertices_filters_cue, erf_cue_combined, erf, conds_cue); % choose which method to use: SVD or Centroid
+            VE = create_virtual_sensor_Centroid(ROI_name, vertices_all, vertices_filters_cue, erf_cue_combined, erf, conds_cue, headmodel, sourcemodel);
             %VE = create_virtual_sensor_SVD(ROI_name, vertices_filters_cue, erf_cue_combined, erf, conds_cue); 
             if ~isempty(VE) % successful
                 ROI_activity.(ROI_name) = VE;
             else
-                sprintf(['No solution for ', ROI_name, ' in cue window.']);
+                fprintf(['No solution for ', ROI_name, ' in cue window.']);
             end
             
             % create virtual sensor for this ROI in target window
-            VE = create_virtual_sensor_Centroid(pos_grid, ROI_name, vertices_filters_target, erf_target_combined, erf, conds_target);
+            VE = create_virtual_sensor_Centroid(ROI_name, vertices_all, vertices_filters_target, erf_target_combined, erf, conds_target, headmodel, sourcemodel);
             %VE = create_virtual_sensor_SVD(ROI_name, vertices_filters_target, erf_target_combined, erf, conds_target);
             if ~isempty(VE) % successful
                 for j = conds_target  % append to existing cue-window results
                     ROI_activity.(ROI_name).(eventnames{j}) = VE.(eventnames{j});
                 end
             else
-                sprintf(['No solution for ', ROI_name, ' in target window.']);
+                fprintf(['No solution for ', ROI_name, ' in target window.']);
             end
         end
-        
-        save([ResultsFolder_ROI SubjectID '_ROI.mat'], 'ROI_activity');
+                    
+        %save([ResultsFolder_ROI SubjectID '_ROI.mat'], 'ROI_activity');
 
         % Plot the source activity at each ROI
         %{
@@ -414,36 +398,8 @@ function source_v1
         % (but ft_timelockstats takes in erf structures, here we don't have the .avg field, just naked data)
         A: either hack it, or use EEGlab (statcond, std_stat).
 
-        TODO: finish implementing it in stats_ROI.m
+        Done: Implemented in stats_ROI.m
 %}
-        %{
-        cfg = [];
-        cfg.parameter    = 'pow';
-        cfg.dim          = grid.dim;
-        cfg.method           = 'montecarlo';
-        cfg.statistic        = 'ft_statfun_depsamplesT';
-        cfg.correctm         = 'cluster';
-        cfg.clusteralpha     = 0.05;
-        cfg.clusterstatistic = 'maxsum';
-        cfg.tail             = 0;
-        cfg.clustertail      = 0;
-        cfg.alpha            = 0.05;
-        cfg.numrandomization = 500;
-
-        numSubjects = length(files);
-        within_design_2x2 = zeros(2,2*numSubjects);
-        within_design_2x2(1,:) = repmat(1:numSubjects,1,2);
-        within_design_2x2(2,1:numSubjects)        = 1;
-        within_design_2x2(2,numSubjects+1:2*numSubjects) = 2;
-
-        cfg.design = within_design_2x2;
-        cfg.uvar  = 1; % row of design matrix that contains unit variable (in this case: subjects)
-        cfg.ivar  = 2; % row of design matrix that contains independent variable (i.e. the conditions)
-
-        stat = ft_timelockstatistics(cfg, source.cuechstay, source.cuechswitch);
-        stat.pos = template_sourcemodel.pos;% keep positions for plotting later
-        %}
-
     end
 end
 
@@ -452,17 +408,26 @@ end
 % SUBFUNCTIONS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% Warp the centre of mass in each ROI (as defined in atlas) into subject space,
-% in preparation for calling create_virtual_sensor_Centroid()
+% retrieve the xyz-coordinates of the given vertices
+function coordinates = get_coordinates_for_vertices(sourcemodel, vertices)
+    % each cycle processes one vertex
+    for i = 1:length(vertices)
+        coordinates(i,:) = sourcemodel.pos(vertices(i), :); %take the warped coordinates
+    end
+end
+
+% Load coordinates of centroids from file, then warp into subject space
+% (in preparation for calling create_virtual_sensor_Centroid)
 %
 % @param mri_realigned: correctly realigned MRI file
-% @param centre_of_mass: list of centroids, one for each ROI (coordinates are in mm)
 % 
-% @output pos_grid: xyz-coordinates of each parcel's centre of mass, in individual space
+% @output pos_grid: centres of mass in individual space
 %
-function pos_grid = warp_centroids(templates_dir, mri_realigned, centre_of_mass)
+function pos_grid = load_centroids(templates_dir, mri_realigned)
     % Load centre of mass information (in mm)
-    %centre_of_mass = load([templates_dir 'Node_AAL116.txt']);
+    % These coordinates were generated using:
+    % https://github.com/mingruixia/BrainNet-Viewer/blob/master/BrainNet_GenCoord.m
+    centre_of_mass = load([templates_dir 'Node_AAL116.txt']);
 
     % convert mri to mm for consistency
     mri_realigned = ft_convert_units(mri_realigned, 'mm');
@@ -480,32 +445,18 @@ function pos_grid = warp_centroids(templates_dir, mri_realigned, centre_of_mass)
     pos_grid = pos_grid./10; 
 end
 
-% plot the parcels in the given ROI, along with the centre of mass
-function plot_ROI_centre_of_mass(ROI_name, parcels_to_plot, pos_grid, headmodel_singleshell, atlas_interpo, grid)
-
-    ft_hastoolbox('brewermap', 1);
-    colors = repmat(flipud(brewermap(64,'RdBu')),1,1); % change the colormap
+% plot vertices & centroid in the given ROI
+function plot_ROI_centre_of_mass(ROI_name, vertices_coords, centroid, headmodel_singleshell)
 
     figure('Name',ROI_name, 'NumberTitle','off'); hold on;
     ft_plot_vol(headmodel_singleshell,  'facecolor', 'cortex', 'edgecolor', 'none');
     alpha 0.5; camlight; hold on;
 
-    % each cycle plots one parcel in the ROI
-    for parcel = parcels_to_plot 
-        % Get atlas points
-        indx = (find(atlas_interpo.tissue == parcel));
-        indx_pos = [];
-        for vol = 1:length(indx)
-            indx_pos(vol,:)= grid.pos(indx(vol),:);
-        end
-        
-        try           
-            ft_plot_mesh(indx_pos, 'vertexcolor',colors(parcel,:), 'vertexsize',10); hold on;
-            ft_plot_mesh(pos_grid(parcel,:), 'vertexcolor','red', 'vertexsize',30); hold on;
-            title(atlas_interpo.tissuelabel(parcel), 'Interpreter', 'none'); hold on; drawnow;
-        catch
-            fprintf('In ROI "%s": Cannot find vertices for parcel "%s"\n', ROI_name, atlas_interpo.tissuelabel{1,parcel});
-        end
+    try           
+        ft_plot_mesh(vertices_coords, 'vertexcolor','blue', 'vertexsize',10); hold on;
+        ft_plot_mesh(centroid, 'vertexcolor','red', 'vertexsize',30); hold off;
+    catch
+        fprintf('In ROI "%s": Cannot plot vertices & centroid.\n', ROI_name);
     end
 end
 
@@ -515,16 +466,17 @@ end
 % uses Centroid method for collapsing all vertices within the ROI into a single VE
 %
 % @param vertices:      a list of vertices within this ROI, each entry contains the spatial filter (set of weights) for one vertex
-% @param erf_combined:  average erf across all (4) conditions
+% @param erf_combined:  average erf across all 4 conditions
 % @param erf:           separate erf for each condition
 %
-function VE = create_virtual_sensor_Centroid(pos_grid, ROI_name, vertices, erf_combined, erf, conds)
- 
-    %TODO: centroid = find_centroid.m(vertices);
-    %      warp_centroid();
-    %      plot for quality check
-    
-    
+function VE = create_virtual_sensor_Centroid(ROI_name, vertices, vertices_filters, erf_combined, erf, conds, headmodel, sourcemodel)
+
+    vertices_coords = get_coordinates_for_vertices(sourcemodel, vertices); % coordinates are in cm
+    centroid = find_centroid(vertices_coords); % compute the centroid of this ROI 
+    plot_ROI_centre_of_mass(ROI_name, vertices_coords, centroid, headmodel); % for quality check
+
+%TODO: fix below (refer to SVD function as reference!)
+
     % Create VE by weighting data_clean_rs from centre of mass
 
     %"To generate a single regional timecourse, individual voxel signals
@@ -544,26 +496,25 @@ function VE = create_virtual_sensor_Centroid(pos_grid, ROI_name, vertices, erf_c
         %vertices = find(atlas_interpo.tissue == label);
 
         % Get corresponding spatial filters
-        F = cat(1,sourceavg.avg.filter{vertices});
+        F = vertices_filters;
 
         % Multiply spatial filter by sensor level data
         timecourse = F(:,:)*data_clean_rs.trial{1,1}(:,:);
 
-        % Get position of parcel grid points (indx_pos) and centre of mass (COM)
-        indx_pos = grid.pos(vertices,:);
-        COM = pos_grid(label,:);
+        % Get position of parcel grid points
+        indx_pos = sourcemodel.pos(vertices,:);
 
         % Weight timecourses by distance
         timecourse_general = [];
 
         for dist = 1:size(indx_pos,1)
-            distance_to_centre = pdist([indx_pos(dist,:).*10 ; COM.*10]); %calculate distance to centre in mm
+            distance_to_centre = pdist([indx_pos(dist,:).*10 ; centroid.*10]); %calculate distance to centre in mm
             timecourse_general(dist,:) = exp((-distance_to_centre.^2)./400).*timecourse(dist,:); %weight
         end
 
         % VE timecourse is equal to mean of the weighted timecourses
         VE.trial{1,1}(label,:) = mean(timecourse_general,1);
-        disp(sprintf('Label = %s is DONE', VE.label{label}));
+        fprintf('Label = %s is DONE', VE.label{label});
     %end
 
     VE.fsample = 200; %input sampling frequency
@@ -577,7 +528,7 @@ end
 % uses SVD method for collapsing all vertices within the ROI into a single VE
 %
 % @param vertices:      a list of vertices within this ROI, each entry contains the spatial filter (set of weights) for one vertex
-% @param erf_combined:  average erf across all (4) conditions
+% @param erf_combined:  average erf across all 4 conditions
 % @param erf:           separate erf for each condition
 %
 function VE = create_virtual_sensor_SVD(ROI_name, vertices, erf_combined, erf, conds)
@@ -585,16 +536,7 @@ function VE = create_virtual_sensor_SVD(ROI_name, vertices, erf_combined, erf, c
 
     % if there are any vertices in this ROI, create virtual sensor to represent this ROI
     if ~isempty(vertices)
-
-        % Concatenate the spatial filters for all vertices in this ROI 
-        % (probably could use a cell fxn to do this nicely rather than a loop)
-        vertices_tmp = [];
-        for i = 1:length(vertices)
-            vertices_tmp = [vertices_tmp; vertices{i}];
-        end
-        vertices = vertices_tmp;
-
-        % Now we want to combine the spatial filters for all vertices in this ROI into one filter
+        % we want to combine the spatial filters for all vertices in this ROI into one filter
         % We do this by performing PCA on concatenated filters * sensor-level cov matrix
         F       = vertices;
         [u,s,v] = svd(F * erf_combined.cov * F'); % Inner dimensions = number of channels i.e. 125 for KIT child system
