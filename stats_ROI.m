@@ -70,7 +70,7 @@ for k = 1:length(ROIs_label)
     GA.(ROI_name) = GA_erf; % store it in the correct field
     
     % Plot the GAs
-    
+    %{
     % cue-locked
     figure('Name', ['Cue window: GA in ' ROI_name]); hold on
     for j = conds_cue
@@ -84,6 +84,7 @@ for k = 1:length(ROIs_label)
         plot(GA_erf.(eventnames_8{j}).time, GA_erf.(eventnames_8{j}).avg);
     end
     legend(eventnames_8(conds_target));
+    %}
 end
 
 save([ResultsFolder_ROI 'GA.mat'], 'GA');
@@ -242,11 +243,6 @@ for i = 1:length(stats_names) % each cycle handles one effect (e.g. cue_lang)
     end
 end
 
-
-%% TODO
-
-% Rename the "results_ROI" folder,
-% then re-run source_v1 using Centroid method (Robert) & run this script again
 
 
 %%
