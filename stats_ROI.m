@@ -86,7 +86,7 @@ for k = 1:length(ROIs_label)
     legend(eventnames_8(conds_target));
 end
 
-%save([ResultsFolder_ROI 'GA.mat'], 'GA');
+save([ResultsFolder_ROI 'GA.mat'], 'GA');
 
 
 %% Statistical analysis (to identify time interval of each effect, i.e. temporal clusters)
@@ -180,26 +180,20 @@ for k = 1:length(ROIs_label)
 
 end
 
-%save([ResultsFolder_ROI 'stats.mat'], 'cue_interaction', 'cue_lang', 'cue_ttype', 'target_interaction', 'target_lang', 'target_ttype');
+save([ResultsFolder_ROI 'stats.mat'], 'cue_interaction', 'cue_lang', 'cue_ttype', 'target_interaction', 'target_lang', 'target_ttype');
 
 
 %% Find the effects & plot them
 
-% Now how do we read out the time interval over which each effect is sig? 
-% (from the stat.mask field? or the manual thing: "min of 10 consecutive time points count as temporal cluster")
-
-% This may be useful:
-%https://mailman.science.ru.nl/pipermail/fieldtrip/2013-July/006853.html
-
-% ---------------------------------
+% Automatically check all the stats output & read out the time interval
+% of each effect (from the stat.mask field)
 
 stats = load([ResultsFolder_ROI 'stats.mat']);
 load([ResultsFolder_ROI 'GA.mat']);
 
-% loop thru all 6 stats output (cue/target lang/ttype/interxn)
-% and loop thru all ROIs in each,
+% loop thru all 6 stats output (cue/target lang/ttype/interxn) and loop thru all ROIs in each,
 % check whether the .mask field has any non-zero entries 
-% (these are the effects & they are already cluster-corrected)
+% (these are the effects & they are already cluster-corrected, so doesn't need to be consecutive 1s)
 stats_names = fieldnames(stats);
 for i = 1:length(stats_names) % each cycle handles one effect (e.g. cue_lang)
     stat_name = stats_names{i};
@@ -213,7 +207,7 @@ for i = 1:length(stats_names) % each cycle handles one effect (e.g. cue_lang)
             %fprintf('%s has an effect in %s, at these time points:%s.\n', ROI_name, stat_name, time_points);            
             start_time = stats.(stat_name).(ROI_name).time(effect(1));
             end_time = stats.(stat_name).(ROI_name).time(effect(end));
-            fprintf('%s has an effect in %s, between %.f~%.f ms.\n', ROI_name, stat_name, start_time*1000, end_time*1000); % convert units to ms
+            fprintf('\n%s has an effect in %s, between %.f~%.f ms.\n', ROI_name, stat_name, start_time*1000, end_time*1000); % convert units to ms
 
             % plot the effect period, overlaid onto the GA plot for this ROI
             if strcmp(stat_name(1:3), 'cue') % this effect occurs in cue window

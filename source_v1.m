@@ -282,10 +282,13 @@ function source_v1
         % Define our ROIs (can combine multiple parcels together to form one ROI)
         ROIs = {{'Frontal_Inf_Oper_L';'Frontal_Inf_Tri_L'},{'Frontal_Inf_Oper_R';'Frontal_Inf_Tri_R'},...
             {'Temporal_Sup_L'},{'Temporal_Sup_R'},{'Supp_Motor_Area_L'},{'Supp_Motor_Area_R'},...
-            {'Cingulum_Ant_L'},{'Cingulum_Ant_R'},{'Frontal_Med_Orb_L'},{'Frontal_Med_Orb_R'}...
+            {'Cingulum_Ant_L'},{'Cingulum_Ant_R'},{'Frontal_Med_Orb_R'}...
             {'Calcarine_L';'Calcarine_R'}};
-
-        ROIs_label = {'LIFG','RIFG','LSTG','RSTG','LSMA','RSMA','LACC','RACC','LdlPFC','RdlPFC','V1'}; %Labels for the groupings
+% This parcel only has 3 points (in AAL), not enough points to find centroid
+% so tmply removed it from list.
+%{'Frontal_Med_Orb_L'},
+%'LdlPFC',
+        ROIs_label = {'LIFG','RIFG','LSTG','RSTG','LSMA','RSMA','LACC','RACC','RdlPFC','V1'}; %Labels for the groupings
         % Not too sure about the dlPFC (BA9, 10, 46) <- I chose 'medial orbitofrontal cortex', 
         % plot seems to include entire middle frontal gyrus and a bit of BA10;
         % alternatively, we could use 'Frontal_Mid_L' (middle frontal gyrus).
@@ -360,7 +363,7 @@ function source_v1
             end
         end
                     
-        %save([ResultsFolder_ROI SubjectID '_ROI.mat'], 'ROI_activity');
+        save([ResultsFolder_ROI SubjectID '_ROI.mat'], 'ROI_activity');
 
         % Plot the source activity at each ROI
         %{
@@ -401,196 +404,193 @@ function source_v1
         Done: Implemented in stats_ROI.m
 %}
     end
-end
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% SUBFUNCTIONS
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% retrieve the xyz-coordinates of the given vertices
-function coordinates = get_coordinates_for_vertices(sourcemodel, vertices)
-    % each cycle processes one vertex
-    for i = 1:length(vertices)
-        coordinates(i,:) = sourcemodel.pos(vertices(i), :); %take the warped coordinates
-    end
-end
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % SUBFUNCTIONS
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% Load coordinates of centroids from file, then warp into subject space
-% (in preparation for calling create_virtual_sensor_Centroid)
-%
-% @param mri_realigned: correctly realigned MRI file
-% 
-% @output pos_grid: centres of mass in individual space
-%
-function pos_grid = load_centroids(templates_dir, mri_realigned)
-    % Load centre of mass information (in mm)
-    % These coordinates were generated using:
-    % https://github.com/mingruixia/BrainNet-Viewer/blob/master/BrainNet_GenCoord.m
-    centre_of_mass = load([templates_dir 'Node_AAL116.txt']);
-
-    % convert mri to mm for consistency
-    mri_realigned = ft_convert_units(mri_realigned, 'mm');
-
-    % Align centres of mass into subject space 
-    % I.e. we are performing inverse non-linear warping from MNI-->individual
-    cfg = [];
-    cfg.template = fullfile(templates_dir, 'single_subj_T1.nii'); % template brain in MNI space (matches AAL atlas)
-    cfg.nonlinear   = 'yes';
-    norm = ft_volumenormalise([], mri_realigned); % transformation matrix from MNI <--> individual
-    posback = ft_warp_apply(norm.params, centre_of_mass, 'sn2individual');
-    pos_grid = ft_warp_apply(pinv(norm.initial), posback); % xyz-coordinates of each parcel's centre of mass, in individual space
-
-    % convert back to cm
-    pos_grid = pos_grid./10; 
-end
-
-% plot vertices & centroid in the given ROI
-function plot_ROI_centre_of_mass(ROI_name, vertices_coords, centroid, headmodel_singleshell)
-
-    figure('Name',ROI_name, 'NumberTitle','off'); hold on;
-    ft_plot_vol(headmodel_singleshell,  'facecolor', 'cortex', 'edgecolor', 'none');
-    alpha 0.5; camlight; hold on;
-
-    try           
-        ft_plot_mesh(vertices_coords, 'vertexcolor','blue', 'vertexsize',10); hold on;
-        ft_plot_mesh(centroid, 'vertexcolor','red', 'vertexsize',30); hold off;
-    catch
-        fprintf('In ROI "%s": Cannot plot vertices & centroid.\n', ROI_name);
-    end
-end
-
-% create a virtual sensor for the given ROI (based on the spatial filter
-% for each vertex within the ROI), to estimate its activity
-%
-% uses Centroid method for collapsing all vertices within the ROI into a single VE
-%
-% @param vertices:      a list of vertices within this ROI, each entry contains the spatial filter (set of weights) for one vertex
-% @param erf_combined:  average erf across all 4 conditions
-% @param erf:           separate erf for each condition
-%
-function VE = create_virtual_sensor_Centroid(ROI_name, vertices, vertices_filters, erf_combined, erf, conds, headmodel, sourcemodel)
-
-    vertices_coords = get_coordinates_for_vertices(sourcemodel, vertices); % coordinates are in cm
-    centroid = find_centroid(vertices_coords); % compute the centroid of this ROI 
-    plot_ROI_centre_of_mass(ROI_name, vertices_coords, centroid, headmodel); % for quality check
-
-%TODO: fix below (refer to SVD function as reference!)
-
-    % Create VE by weighting data_clean_rs from centre of mass
-
-    %"To generate a single regional timecourse, individual voxel signals
-    % were weighted according to their distance from the centre of mass"
-    % Brookes et al., (2016)
-
-    % Create fake VE structure
-    VE          = [];
-    VE.label    = {ROI_name}; %atlas.tissuelabel(1:90);
-    VE.time     = erf_combined.time; %data_clean_rs.time;
-
-    % For each label find vertices of interest, perform PCA and multply by
-    % spatial filter
-    %for label = 1:90 % only take 90 ROIs (AAL-90)
-
-        % Get vertices encompassing the parcel
-        %vertices = find(atlas_interpo.tissue == label);
-
-        % Get corresponding spatial filters
-        F = vertices_filters;
-
-        % Multiply spatial filter by sensor level data
-        timecourse = F(:,:)*data_clean_rs.trial{1,1}(:,:);
-
-        % Get position of parcel grid points
-        indx_pos = sourcemodel.pos(vertices,:);
-
-        % Weight timecourses by distance
-        timecourse_general = [];
-
-        for dist = 1:size(indx_pos,1)
-            distance_to_centre = pdist([indx_pos(dist,:).*10 ; centroid.*10]); %calculate distance to centre in mm
-            timecourse_general(dist,:) = exp((-distance_to_centre.^2)./400).*timecourse(dist,:); %weight
+    % retrieve the xyz-coordinates of the given vertices
+    function coordinates = get_coordinates_for_vertices(sourcemodel, vertices)
+        % each cycle processes one vertex
+        for i = 1:length(vertices)
+            coordinates(i,:) = sourcemodel.pos(vertices(i), :); %take the warped coordinates
         end
 
-        % VE timecourse is equal to mean of the weighted timecourses
-        VE.trial{1,1}(label,:) = mean(timecourse_general,1);
-        fprintf('Label = %s is DONE', VE.label{label});
-    %end
-
-    VE.fsample = 200; %input sampling frequency
-    %save VE VE
-    
-end    
-
-% create a virtual sensor for the given ROI (based on the spatial filter
-% for each vertex within the ROI), to estimate its activity
-%
-% uses SVD method for collapsing all vertices within the ROI into a single VE
-%
-% @param vertices:      a list of vertices within this ROI, each entry contains the spatial filter (set of weights) for one vertex
-% @param erf_combined:  average erf across all 4 conditions
-% @param erf:           separate erf for each condition
-%
-function VE = create_virtual_sensor_SVD(ROI_name, vertices, erf_combined, erf, conds)
-    VE = [];
-
-    % if there are any vertices in this ROI, create virtual sensor to represent this ROI
-    if ~isempty(vertices)
-        % we want to combine the spatial filters for all vertices in this ROI into one filter
-        % We do this by performing PCA on concatenated filters * sensor-level cov matrix
-        F       = vertices;
-        [u,s,v] = svd(F * erf_combined.cov * F'); % Inner dimensions = number of channels i.e. 125 for KIT child system
-        filter  = u' * F;
-
-        % Create VE using this filter
-        %VE.label = {ROI_name};
-        for i = conds
-            % put it into a timelock structure for later calling ft_timelockstatistics (in stats_ROI.m)
-            VE.(eventnames{i}).time = erf_combined.time;
-            VE.(eventnames{i}).avg(1,:) = filter(1,:) * erf.(eventnames{i}).avg(:,:); % estimated source activity = filter * erf (i.e. s = w * X)
-            VE.(eventnames{i}).label = {ROI_name};
-            VE.(eventnames{i}).dimord = 'chan_time';
-        end
-
-        % Preserve .sampleinfo field to avoid warnings later
-        %VE.sampleinfo = data.sampleinfo;
-
-
-        % only for time-freq analysis
-        %{
-        %    tfve_plot = figure;
-        %    ve_plot   = figure;
-
-        % Create TFR of the VE
-        cfg         = [];
-        cfg.channel = 'all';
-        cfg.method  = 'wavelet';
-        cfg.width   = 7;
-        cfg.output  = 'pow';
-        cfg.foi     = freqband(1):0.25:freqband(2);
-        cfg.toi     = -1.0:0.05:1.0; % Need to clean these time windows up for consistency
-        cfg.pad     = 'nextpow2';
-        TFRwave     = ft_freqanalysis(cfg, eval(ROIs_label{k}));
-        save([fname,'_',ROIs_label{k},'_TFRwave_beta'],'TFRwave')
-
-        % Plot
-        figure(tfve_plot)
-        subplot(4,2,k)
-        cfg          = [];
-        cfg.ylim     = freqband;
-        cfg.baseline = [-0.6 -0.1]; % To do : fix time windows
-        cfg.xlim     = [-0.2 1.0];
-        ft_singleplotTFR(cfg, TFRwave);
-        title(sprintf('%s',ROIs_label{k}));
-        colormap(colours)
-
-        figure(ve_plot);
-        cfg      = [];
-        cfg.xlim = [-0.2 1];
-        eval([ROIs_label{k},'_avg_VE_beta           = ft_timelockanalysis(cfg,',ROIs_label{k},');']);
-        subplot(4,2,k)
-        eval(['ft_singleplotER(cfg,',ROIs_label{k},'_avg_VE_beta)']) % Could add smooth here
-        save([fname,'_',ROIs_label{k},'_avg_VE_beta'],[ROIs_label{k},'_avg_VE_beta'])
-        %}
+        % alternative method:
+        %coordinates = sourcemodel.pos(vertices,:);
     end
-end    
+
+    % Load coordinates of centroids from file, then warp into subject space
+    % (in preparation for calling create_virtual_sensor_Centroid)
+    %
+    % @param mri_realigned: correctly realigned MRI file
+    % 
+    % @output pos_grid: centres of mass in individual space
+    %
+    function pos_grid = load_centroids(templates_dir, mri_realigned)
+        % Load centre of mass information (in mm)
+        % These coordinates were generated using:
+        % https://github.com/mingruixia/BrainNet-Viewer/blob/master/BrainNet_GenCoord.m
+        centre_of_mass = load([templates_dir 'Node_AAL116.txt']);
+
+        % convert mri to mm for consistency
+        mri_realigned = ft_convert_units(mri_realigned, 'mm');
+
+        % Align centres of mass into subject space 
+        % I.e. we are performing inverse non-linear warping from MNI-->individual
+        cfg = [];
+        cfg.template = fullfile(templates_dir, 'single_subj_T1.nii'); % template brain in MNI space (matches AAL atlas)
+        cfg.nonlinear   = 'yes';
+        norm = ft_volumenormalise([], mri_realigned); % transformation matrix from MNI <--> individual
+        posback = ft_warp_apply(norm.params, centre_of_mass, 'sn2individual');
+        pos_grid = ft_warp_apply(pinv(norm.initial), posback); % xyz-coordinates of each parcel's centre of mass, in individual space
+
+        % convert back to cm
+        pos_grid = pos_grid./10; 
+    end
+
+    % plot vertices & centroid in the given ROI
+    function plot_ROI_centre_of_mass(ROI_name, vertices_coords, centroid, headmodel_singleshell)
+
+        figure('Name',ROI_name, 'NumberTitle','off'); hold on;
+        ft_plot_vol(headmodel_singleshell,  'facecolor', 'cortex', 'edgecolor', 'none');
+        alpha 0.5; camlight; hold on;
+
+        try           
+            ft_plot_mesh(vertices_coords, 'vertexcolor','blue', 'vertexsize',10); hold on;
+            ft_plot_mesh(centroid, 'vertexcolor','red', 'vertexsize',30); hold off;
+        catch
+            fprintf('In ROI "%s": Cannot plot vertices & centroid.\n', ROI_name);
+        end
+    end
+
+    % create a virtual sensor for the given ROI (based on the spatial filter
+    % for each vertex within the ROI), to estimate its activity
+    %
+    % uses Centroid method for collapsing all vertices within the ROI into a single VE
+    %
+    % @param vertices:      a list of vertices within this ROI (specified by their vertex index)
+    % @param vertices_filters: a list of vertices within this ROI, each entry contains the spatial filter (set of weights) for one vertex
+    % @param erf_combined:  average erf across all 4 conditions
+    % @param erf:           separate erf for each condition
+    %
+    function VE = create_virtual_sensor_Centroid(ROI_name, vertices, vertices_filters, erf_combined, erf, conds, headmodel, sourcemodel)
+
+        % compute the coordinates of the centroid
+        vertices_coords = get_coordinates_for_vertices(sourcemodel, vertices); % coordinates are in cm
+        centroid = find_centroid(vertices_coords); % compute the centroid of this ROI 
+        %plot_ROI_centre_of_mass(ROI_name, vertices_coords, centroid, headmodel); % for quality check
+
+
+        % Create VE by collapsing the activities at all vertices within ROI into one timecourse,
+        % weighting the activity at each vertex based on its distance from centre of mass
+        %
+        %"To generate a single regional timecourse, individual voxel signals
+        % were weighted according to their distance from the centre of mass"
+        % Brookes et al., (2016)
+
+        VE = [];
+
+        % if there are any vertices in this ROI, create virtual sensor to represent this ROI
+        if ~isempty(vertices_filters)
+            for i = conds
+                % put it into a timelock structure for later calling ft_timelockstatistics (in stats_ROI.m)
+                VE.(eventnames{i}).time = erf_combined.time;
+                VE.(eventnames{i}).label = {ROI_name};
+                VE.(eventnames{i}).dimord = 'chan_time';
+
+                % a list of reconstructed source activities, one for each vertex
+                timecourses = vertices_filters(:,:) * erf.(eventnames{i}).avg(:,:); % estimated source activity = filter * erf (i.e. s = w * X) 
+
+                % weight the timecourse for each vertex by its distance to centre
+                timecourses_weighted = [];
+                for vertex = 1:size(vertices_coords,1) % each cycle processes one vertex
+                    distance = pdist([vertices_coords(vertex,:).*10 ; centroid.*10]); % calculate distance to centre in mm
+                    timecourses_weighted(vertex,:) = exp((-distance.^2)./400) .* timecourses(vertex,:); % weight
+                end
+
+                % take the mean of all the weighted timecourses (i.e. collapse into one timecourse)
+                VE.(eventnames{i}).avg = mean(timecourses_weighted, 1);
+            end
+
+            % Preserve .sampleinfo field to avoid warnings later
+            %VE.sampleinfo = data.sampleinfo;
+        end    
+    end    
+
+    % create a virtual sensor for the given ROI (based on the spatial filter
+    % for each vertex within the ROI), to estimate its activity
+    %
+    % uses SVD method for collapsing all vertices within the ROI into a single VE
+    %
+    % @param vertices_filters: a list of vertices within this ROI, each entry contains the spatial filter (set of weights) for one vertex
+    % @param erf_combined:  average erf across all 4 conditions
+    % @param erf:           separate erf for each condition
+    %
+    function VE = create_virtual_sensor_SVD(ROI_name, vertices_filters, erf_combined, erf, conds)
+        VE = [];
+
+        % if there are any vertices in this ROI, create virtual sensor to represent this ROI
+        if ~isempty(vertices_filters)
+            % we want to combine the spatial filters for all vertices in this ROI into one filter
+            % We do this by performing PCA on concatenated filters * sensor-level cov matrix
+            F       = vertices_filters; % make a shorthand
+            [u,s,v] = svd(F * erf_combined.cov * F'); % Inner dimensions = number of channels i.e. 125 for KIT child system
+            filter  = u' * F;
+
+            % Create VE using this filter
+            %VE.label = {ROI_name};
+            for i = conds
+                % put it into a timelock structure for later calling ft_timelockstatistics (in stats_ROI.m)
+                VE.(eventnames{i}).time = erf_combined.time;
+                VE.(eventnames{i}).avg(1,:) = filter(1,:) * erf.(eventnames{i}).avg(:,:); % estimated source activity = filter * erf (i.e. s = w * X)
+                VE.(eventnames{i}).label = {ROI_name};
+                VE.(eventnames{i}).dimord = 'chan_time';
+            end
+
+            % Preserve .sampleinfo field to avoid warnings later
+            %VE.sampleinfo = data.sampleinfo;
+
+
+            % only for time-freq analysis
+            %{
+            %    tfve_plot = figure;
+            %    ve_plot   = figure;
+
+            % Create TFR of the VE
+            cfg         = [];
+            cfg.channel = 'all';
+            cfg.method  = 'wavelet';
+            cfg.width   = 7;
+            cfg.output  = 'pow';
+            cfg.foi     = freqband(1):0.25:freqband(2);
+            cfg.toi     = -1.0:0.05:1.0; % Need to clean these time windows up for consistency
+            cfg.pad     = 'nextpow2';
+            TFRwave     = ft_freqanalysis(cfg, eval(ROIs_label{k}));
+            save([fname,'_',ROIs_label{k},'_TFRwave_beta'],'TFRwave')
+
+            % Plot
+            figure(tfve_plot)
+            subplot(4,2,k)
+            cfg          = [];
+            cfg.ylim     = freqband;
+            cfg.baseline = [-0.6 -0.1]; % To do : fix time windows
+            cfg.xlim     = [-0.2 1.0];
+            ft_singleplotTFR(cfg, TFRwave);
+            title(sprintf('%s',ROIs_label{k}));
+            colormap(colours)
+
+            figure(ve_plot);
+            cfg      = [];
+            cfg.xlim = [-0.2 1];
+            eval([ROIs_label{k},'_avg_VE_beta           = ft_timelockanalysis(cfg,',ROIs_label{k},');']);
+            subplot(4,2,k)
+            eval(['ft_singleplotER(cfg,',ROIs_label{k},'_avg_VE_beta)']) % Could add smooth here
+            save([fname,'_',ROIs_label{k},'_avg_VE_beta'],[ROIs_label{k},'_avg_VE_beta'])
+            %}
+        end
+    end    
+
+end % main function end
