@@ -125,32 +125,31 @@ function source_v1
 
         %% Step 3: prepare sourcemodel & leadfield
 
-        % Load template headmodel & sourcemodel
-        %load([templates_dir, 'standard_singleshell']);
-        load([templates_dir, 'standard_sourcemodel3d10mm']);                                                
-        template_sourcemodel = sourcemodel;
-
-        % convert headmodel into standard units                              
-        %cfg                = [];
-        %cfg.method         = 'singleshell';
-        %template_headmodel = vol; % This variable (vol) is the template headmodel from 'standard_singleshell'
-        %template_headmodel = ft_convert_units(template_headmodel, 'cm'); % Convert the vol to cm, because the CTF convention is to express everything in cm.
-
         % Load template brain MNI space
         %template_mri          = ft_read_mri(fullfile(templates_dir, 'template\\anatomy\\single_subj_T1_1mm.nii')); %This is the standard which matches AAL space
         %template_mri.coordsys = 'nifti_spm'; % So that FieldTrip knows how to interpret the coordinate system
+        
+        % Load template headmodel
+        load([templates_dir, 'standard_singleshell']);
+        template_headmodel = vol; % rename the loaded variable                                     
+        template_headmodel = ft_convert_units(template_headmodel, 'cm'); % convert headmodel into standard units (CTF convention is to express everything in cm)
 
-    %{    
+        % create template sourcemodel using template headmodel
         cfg             = [];
-        cfg.grid.xgrid  = -20:1:20;
-        cfg.grid.ygrid  = -20:1:20;
-        cfg.grid.zgrid  = -20:1:20;
+        cfg.grid.xgrid  = -20:0.5:20; % x-axis range: -20 ~ 20cm, step 0.5cm (change this value to adjust reso)
+        cfg.grid.ygrid  = -20:0.5:20;
+        cfg.grid.zgrid  = -20:0.5:20;
         cfg.grid.unit   = 'cm';
         cfg.grid.tight  = 'yes';
         cfg.inwardshift = -0.1;
         cfg.headmodel   = template_headmodel;
         template_sourcemodel = ft_prepare_sourcemodel(cfg);
-    %}
+    
+        % Alternatively: load template sourcemodel
+        %load([templates_dir, 'standard_sourcemodel3d10mm']); % can choose higher reso, e.g. 5mm                                               
+        %template_sourcemodel = sourcemodel; % rename the loaded variable
+
+        
         % Warp template grid into subject space
         cfg                = [];
         cfg.grid.warpmni   = 'yes';
@@ -160,9 +159,12 @@ function source_v1
         sourcemodel = ft_prepare_sourcemodel(cfg); % creates individual sourcemodel
 
         % make a figure of the single subject headmodel, and grid positions
-        % ft_plot_sens(grads, 'style', '*b');
-        % ft_plot_vol(headmodel, 'edgecolor', 'none'); alpha 0.4;
-        % ft_plot_mesh(sourcemodel.pos(sourcemodel.inside,:));
+        figure;
+        %ft_plot_sens(grads, 'style', '*b'); $ plot the MEG sensor locations
+        ft_plot_vol(headmodel, 'edgecolor', 'cortex'); alpha 0.4; % plot the single shell (i.e. brain shape)
+        ft_plot_mesh(sourcemodel.pos(sourcemodel.inside,:)); % plot all vertices (ie. grid points) that are inside the brain
+%TODO: the grid & headmodel don't align, what did i do wrong? -> ask Robert
+
 
         % Create the leadfield
         cfg            = [];
@@ -288,17 +290,19 @@ function source_v1
 % so tmply removed it from list.
 %{'Frontal_Med_Orb_L'},
 %'LdlPFC',
+% Sln: using a higher-reso sourcemodel (5mm grid) might allow more points to be assigned to this parcel
         ROIs_label = {'LIFG','RIFG','LSTG','RSTG','LSMA','RSMA','LACC','RACC','RdlPFC','V1'}; %Labels for the groupings
         % Not too sure about the dlPFC (BA9, 10, 46) <- I chose 'medial orbitofrontal cortex', 
         % plot seems to include entire middle frontal gyrus and a bit of BA10;
         % alternatively, we could use 'Frontal_Mid_L' (middle frontal gyrus).
         % For more precise definition of preSMA, 
-        % try (1) Stanford FIND parcellation (2) HMAT (from Robert)
+        % try (1) Stanford FIND parcellation (2) HMAT
 
-        
+% to plot selected ROIs only:
+%ROIs = {{'Cingulum_Ant_L'},{'Cingulum_Ant_R'},{'Frontal_Med_Orb_L'},{'Frontal_Med_Orb_R'}};       
+%ROIs_label = {'LACC','RACC','LdlPFC','RdlPFC'}; %Labels for the groupings
+
         % Make a plot showing the vertices in the parcels on the source model - a good sanity check 
-        %{        
-        % make a figure of the single subject headmodel, and grid positions
         figure('Name','Position of Points','NumberTitle','off'); hold on;
         ft_plot_vol(headmodel,  'facecolor', 'cortex', 'edgecolor', 'none','facealpha',0.4);
         hold on;
@@ -311,7 +315,7 @@ function source_v1
                 % Get atlas points
                 indx = (find(sourcemodel.tissue == region));
                 for vol = 1:length(indx)
-                    indx_pos_temp(vol,:) = sourcemodel.pos(indx(vol),:); %take the warped one
+                    indx_pos_temp(vol,:) = sourcemodel.pos(indx(vol),:); % take the warped coords
                 end
                 indx_pos = vertcat(indx_pos, indx_pos_temp);
             end
@@ -440,9 +444,9 @@ function source_v1
 
         % Align centres of mass into subject space 
         % I.e. we are performing inverse non-linear warping from MNI-->individual
-        cfg = [];
-        cfg.template = fullfile(templates_dir, 'single_subj_T1.nii'); % template brain in MNI space (matches AAL atlas)
-        cfg.nonlinear   = 'yes';
+        %cfg = [];
+        %cfg.template = fullfile(templates_dir, 'single_subj_T1.nii'); % template brain in MNI space (matches AAL atlas)
+        %cfg.nonlinear   = 'yes';
         norm = ft_volumenormalise([], mri_realigned); % transformation matrix from MNI <--> individual
         posback = ft_warp_apply(norm.params, centre_of_mass, 'sn2individual');
         pos_grid = ft_warp_apply(pinv(norm.initial), posback); % xyz-coordinates of each parcel's centre of mass, in individual space
