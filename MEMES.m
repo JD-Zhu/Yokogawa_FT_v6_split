@@ -218,19 +218,25 @@ function MEMES(dir_name,coreg_output,elpfile,hspfile,confile,mrkfile,path_to_MRI
     headmodel_singleshell = ft_prepare_headmodel(cfg, mri_segmented); % in cm, create headmodel
 
     % Apply transformation matrix
-    headmodel_singleshell.bnd.pos = ft_warp_apply(trans_matrix,headmodel_singleshell.bnd.pos);
+    headmodel_singleshell.bnd.pos = ft_warp_apply(trans_matrix, headmodel_singleshell.bnd.pos);
+    mri_realigned = ft_transform_geometry(trans_matrix, mri_realigned);
+    
+    % sanity check (plot mri & headmodel together)
+    ft_determine_coordsys(mri, 'interactive','no'); hold on
+    ft_plot_vol(headmodel);
+
 
     figure;ft_plot_headshape(headshape_downsampled) %plot headshape
     ft_plot_sens(grad_trans, 'style', 'k*')
-    ft_plot_vol(headmodel_singleshell,  'facecolor', 'cortex', 'edgecolor', 'none');alpha 1; camlight
+    ft_plot_vol(headmodel_singleshell,  'facecolor', 'cortex', 'edgecolor', 'none'); alpha 1; camlight
     view([90,0]); title('After Coreg');
     print([coreg_output 'headmodel_quality'],'-dpdf');
 
     fprintf('\nSaving the necessary data\n');
     save ([coreg_output 'headmodel_singleshell.mat'], 'headmodel_singleshell');
-    save ([coreg_output 'mri_realigned'], 'mri_realigned');
-    save ([coreg_output 'trans_matrix'], 'trans_matrix');
-    save ([coreg_output 'grad_trans'], 'grad_trans');
+    save ([coreg_output 'mri_realigned_transformed.mat'], 'mri_realigned');
+    save ([coreg_output 'trans_matrix.mat'], 'trans_matrix');
+    save ([coreg_output 'grad_trans.mat'], 'grad_trans');
     save ([coreg_output 'matlab.mat']); % save all variables
 
     fprintf('\nCompleted MEMES.m - check the output for quality control\n');

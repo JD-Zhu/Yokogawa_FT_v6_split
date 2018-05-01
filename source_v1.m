@@ -33,7 +33,9 @@ function source_v1
         coreg_output = [pwd '\\MEMES\\']; % where to store the output from MEMES
 
         elp_file  = dir('*.elp'); % find the .elp file
-        filename_base = elp_file.name(1:strfind(elp_file.name,'.')-1); % get the base filename (ie. remove suffix)
+        if isempty(elp_file) % not a subject folder, skip
+            continue;
+        end
 
         % if headmodel etc haven't been generated, do this now
         if ~exist([coreg_output 'headmodel_singleshell.mat'], 'file')
@@ -43,6 +45,7 @@ function source_v1
             initial_mri_realign = temp.initial_mri_realign;
             path_to_MRI_library = MRI_folder;
 
+            filename_base = elp_file.name(1:strfind(elp_file.name,'.')-1); % get the base filename (ie. remove suffix)
             elpfile = [filename_base, '.elp'];
             hspfile = [filename_base, '.hsp'];
             confile = [filename_base, '_B1.con'];
@@ -62,7 +65,7 @@ function source_v1
         headmodel = temp.headmodel_singleshell;
         temp = load ([coreg_output 'grad_trans.mat']);
         grads = temp.grad_trans;
-        temp = load ([coreg_output 'mri_realigned.mat']);
+        temp = load ([coreg_output 'mri_realigned_transformed.mat']);
         mri = temp.mri_realigned;
 
 
@@ -129,6 +132,9 @@ function source_v1
         %template_mri          = ft_read_mri(fullfile(templates_dir, 'template\\anatomy\\single_subj_T1_1mm.nii')); %This is the standard which matches AAL space
         %template_mri.coordsys = 'nifti_spm'; % So that FieldTrip knows how to interpret the coordinate system
         
+        % Create template grid (aka. template sourcemodel)
+        % Method 1:
+        %{
         % Load template headmodel
         load([templates_dir, 'standard_singleshell']);
         template_headmodel = vol; % rename the loaded variable                                     
@@ -144,11 +150,15 @@ function source_v1
         cfg.inwardshift = -0.1;
         cfg.headmodel   = template_headmodel;
         template_sourcemodel = ft_prepare_sourcemodel(cfg);
-    
-        % Alternatively: load template sourcemodel
-        %load([templates_dir, 'standard_sourcemodel3d10mm']); % can choose higher reso, e.g. 5mm                                               
-        %template_sourcemodel = sourcemodel; % rename the loaded variable
-
+        %}
+        % Method 2: load the template sourcemodel provided by FT
+        load([templates_dir, 'standard_sourcemodel3d5mm']); % usually 10mm grid is fine.
+                                                            % here we use a higher resolution grid (5mm),
+                                                            % to increase the number of vertices assinged to
+                                                            % the parcel 'Frontal_Med_Orb_L' (in AAL atlas)
+                                                            % Otherwise it only contains 3 vertices - not enough to compute centroid!
+        template_sourcemodel = sourcemodel; % rename the loaded variable
+        clear sourcemodel;
         
         % Warp template grid into subject space
         cfg                = [];
@@ -158,13 +168,20 @@ function source_v1
         cfg.mri            = mri; % individual mri
         sourcemodel = ft_prepare_sourcemodel(cfg); % creates individual sourcemodel
 
-        % make a figure of the single subject headmodel, and grid positions
+        % Plots for sanity checks
+        % plot headmodel, grid, and mri
+        %{        
+        ft_determine_coordsys(mri, 'interactive','no'); hold on
+        ft_plot_vol(headmodel);
+        ft_plot_mesh(sourcemodel.pos(sourcemodel.inside,:));
+        %}           
+        % plot headmodel, grid, and sensor locations
+        %{
         figure;
-        %ft_plot_sens(grads, 'style', '*b'); $ plot the MEG sensor locations
+        ft_plot_sens(grads, 'style', '*b'); % plot the MEG sensor locations
         ft_plot_vol(headmodel, 'edgecolor', 'cortex'); alpha 0.4; % plot the single shell (i.e. brain shape)
         ft_plot_mesh(sourcemodel.pos(sourcemodel.inside,:)); % plot all vertices (ie. grid points) that are inside the brain
-%TODO: the grid & headmodel don't align, what did i do wrong? -> ask Robert
-
+        %}
 
         % Create the leadfield
         cfg            = [];
@@ -284,25 +301,22 @@ function source_v1
         % Define our ROIs (can combine multiple parcels together to form one ROI)
         ROIs = {{'Frontal_Inf_Oper_L';'Frontal_Inf_Tri_L'},{'Frontal_Inf_Oper_R';'Frontal_Inf_Tri_R'},...
             {'Temporal_Sup_L'},{'Temporal_Sup_R'},{'Supp_Motor_Area_L'},{'Supp_Motor_Area_R'},...
-            {'Cingulum_Ant_L'},{'Cingulum_Ant_R'},{'Frontal_Med_Orb_R'}...
+            {'Cingulum_Ant_L'},{'Cingulum_Ant_R'},{'Frontal_Med_Orb_L'},{'Frontal_Med_Orb_R'}...
             {'Calcarine_L';'Calcarine_R'}};
-% This parcel only has 3 points (in AAL), not enough points to find centroid
-% so tmply removed it from list.
-%{'Frontal_Med_Orb_L'},
-%'LdlPFC',
-% Sln: using a higher-reso sourcemodel (5mm grid) might allow more points to be assigned to this parcel
-        ROIs_label = {'LIFG','RIFG','LSTG','RSTG','LSMA','RSMA','LACC','RACC','RdlPFC','V1'}; %Labels for the groupings
+
+        ROIs_label = {'LIFG','RIFG','LSTG','RSTG','LSMA','RSMA','LACC','RACC','LdlPFC','RdlPFC','V1'}; %Labels for the groupings
         % Not too sure about the dlPFC (BA9, 10, 46) <- I chose 'medial orbitofrontal cortex', 
         % plot seems to include entire middle frontal gyrus and a bit of BA10;
         % alternatively, we could use 'Frontal_Mid_L' (middle frontal gyrus).
         % For more precise definition of preSMA, 
         % try (1) Stanford FIND parcellation (2) HMAT
 
-% to plot selected ROIs only:
-%ROIs = {{'Cingulum_Ant_L'},{'Cingulum_Ant_R'},{'Frontal_Med_Orb_L'},{'Frontal_Med_Orb_R'}};       
-%ROIs_label = {'LACC','RACC','LdlPFC','RdlPFC'}; %Labels for the groupings
 
         % Make a plot showing the vertices in the parcels on the source model - a good sanity check 
+        %{
+        % to plot selected ROIs only:
+        %ROIs = {{'Frontal_Med_Orb_R'},{'Cingulum_Ant_R'},{'Frontal_Med_Orb_L'},{'Frontal_Med_Orb_R'}};       
+
         figure('Name','Position of Points','NumberTitle','off'); hold on;
         ft_plot_vol(headmodel,  'facecolor', 'cortex', 'edgecolor', 'none','facealpha',0.4);
         hold on;
@@ -347,8 +361,8 @@ function source_v1
 
             
             % create virtual sensor for this ROI in cue window
-            VE = create_virtual_sensor_Centroid(ROI_name, vertices_all, vertices_filters_cue, erf_cue_combined, erf, conds_cue, headmodel, sourcemodel);
-            %VE = create_virtual_sensor_SVD(ROI_name, vertices_filters_cue, erf_cue_combined, erf, conds_cue); 
+            %VE = create_virtual_sensor_Centroid(ROI_name, vertices_all, vertices_filters_cue, erf_cue_combined, erf, conds_cue, headmodel, sourcemodel);
+            VE = create_virtual_sensor_SVD(ROI_name, vertices_filters_cue, erf_cue_combined, erf, conds_cue); 
             if ~isempty(VE) % successful
                 ROI_activity.(ROI_name) = VE;
             else
@@ -356,8 +370,8 @@ function source_v1
             end
             
             % create virtual sensor for this ROI in target window
-            VE = create_virtual_sensor_Centroid(ROI_name, vertices_all, vertices_filters_target, erf_target_combined, erf, conds_target, headmodel, sourcemodel);
-            %VE = create_virtual_sensor_SVD(ROI_name, vertices_filters_target, erf_target_combined, erf, conds_target);
+            %VE = create_virtual_sensor_Centroid(ROI_name, vertices_all, vertices_filters_target, erf_target_combined, erf, conds_target, headmodel, sourcemodel);
+            VE = create_virtual_sensor_SVD(ROI_name, vertices_filters_target, erf_target_combined, erf, conds_target);
             if ~isempty(VE) % successful
                 for j = conds_target  % append to existing cue-window results
                     ROI_activity.(ROI_name).(eventnames{j}) = VE.(eventnames{j});
