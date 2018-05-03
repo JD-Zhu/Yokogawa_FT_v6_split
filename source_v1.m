@@ -34,6 +34,7 @@ function source_v1
 
         elp_file  = dir('*.elp'); % find the .elp file
         if isempty(elp_file) % not a subject folder, skip
+            fprintf('%s: Not a subject folder - skip!', SubjectID);
             continue;
         end
 

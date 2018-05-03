@@ -191,6 +191,7 @@ save([ResultsFolder_ROI 'stats.mat'], 'cue_interaction', 'cue_lang', 'cue_ttype'
 
 stats = load([ResultsFolder_ROI 'stats.mat']);
 load([ResultsFolder_ROI 'GA.mat']);
+fprintf('\nThe following effects were detected:\n');
 
 % loop thru all 6 stats output (cue/target lang/ttype/interxn) and loop thru all ROIs in each,
 % check whether the .mask field has any non-zero entries 
@@ -208,7 +209,7 @@ for i = 1:length(stats_names) % each cycle handles one effect (e.g. cue_lang)
             %fprintf('%s has an effect in %s, at these time points:%s.\n', ROI_name, stat_name, time_points);            
             start_time = stats.(stat_name).(ROI_name).time(effect(1));
             end_time = stats.(stat_name).(ROI_name).time(effect(end));
-            fprintf('\n%s has an effect in %s, between %.f~%.f ms.\n', ROI_name, stat_name, start_time*1000, end_time*1000); % convert units to ms
+            fprintf('%s has an effect in %s, between %.f~%.f ms.\n', ROI_name, stat_name, start_time*1000, end_time*1000); % convert units to ms
 
             % plot the effect period, overlaid onto the GA plot for this ROI
             if strcmp(stat_name(1:3), 'cue') % this effect occurs in cue window
