@@ -71,7 +71,7 @@ function source_v1
 
 
         %% Step 2: load this subject's ERF results
-        subject_data = load([ResultsFolder SubjectID '_erf.mat']);
+        subject_data = load([ResultsFolder SubjectID '_erf_noPCA.mat']);
         erf = subject_data.erf_clean;
         erf_cue_combined = subject_data.erf_cue_combined;
         erf_target_combined = subject_data.erf_target_combined;

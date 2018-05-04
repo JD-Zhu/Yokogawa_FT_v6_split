@@ -54,9 +54,12 @@ for j = 1:length(eventnames_8)
     % "{:}" means to use data from all elements of the variable
 end
 
-%save([ResultsFolder 'GA_erf_allConditions.mat'], 'GA_erf');
+save([ResultsFolder 'GA_erf_allConditions.mat'], 'GA_erf');
 
-% plot
+% multiplot
+%{
+load([ResultsFolder 'lay.mat']);
+        
 cfg              = [];
 cfg.showlabels   = 'yes';
 cfg.fontsize     = 6;
@@ -73,10 +76,10 @@ legend(eventnames_8(conds_cue));
 figure('Name','ft_multiplotER: GA_erf.targetchstay, GA_erf.targetchsw, GA_erf.targetenstay, GA_erf.targetensw');
 ft_multiplotER(cfg, GA_erf.targetchstay, GA_erf.targetchswitch, GA_erf.targetenstay, GA_erf.targetenswitch);
 legend(eventnames_8(conds_target));
+%}
 
 
-
-% CALCULATE global averages across all sensors (i.e. GFP = global field potentials)
+% CALCULATE global averages across all sensors (i.e. GFP = global field power)
 cfg        = [];
 cfg.method = 'power';
 %cfg.channel = {'AG017', 'AG018', 'AG019', 'AG022', 'AG023', 'AG025', 'AG029', 'AG063', 'AG064', 'AG143'}; % 10 sig channels in cluster
@@ -88,6 +91,7 @@ end
 figure('Name','GFP_cue'); hold on
 for j = conds_cue
     plot(GA_erf_GFP.(eventnames_8{j}).time, GA_erf_GFP.(eventnames_8{j}).avg);
+    xlim([-0.2 0.75]);
 end
 legend(eventnames_8(conds_cue));
 
@@ -95,6 +99,7 @@ legend(eventnames_8(conds_cue));
 figure('Name','GFP_target'); hold on
 for j = conds_target
     plot(GA_erf_GFP.(eventnames_8{j}).time, GA_erf_GFP.(eventnames_8{j}).avg);
+    xlim([-0.2 0.75]);
 end
 legend(eventnames_8(conds_target));
 
@@ -106,9 +111,11 @@ averageAcrossConds_target = GA_erf_GFP.targetchstay;
 averageAcrossConds_target.avg = (GA_erf_GFP.targetchstay.avg + GA_erf_GFP.targetchswitch.avg + GA_erf_GFP.targetenstay.avg + GA_erf_GFP.targetenswitch.avg) / 4;
 
 figure('Name','Average across all conds - cue window'); 
-plot(averageAcrossConds_cue.time, averageAcrossConds_cue.avg); xlim([-0.2 0.75]);
+plot(averageAcrossConds_cue.time, averageAcrossConds_cue.avg); 
+xlim([-0.2 0.75]);
 figure('Name','Average across all conds - target window'); 
-plot(averageAcrossConds_target.time, averageAcrossConds_target.avg); xlim([-0.2 0.75]);
+plot(averageAcrossConds_target.time, averageAcrossConds_target.avg); 
+xlim([-0.2 0.75]);
 
 
 %% Statistical analysis
@@ -117,16 +124,16 @@ fprintf('\n= STATS: CLUSTER-BASED PERMUTATION TESTS =\n');
 
 cfg = [];
 cfg.channel = {'all', '-AG083', '-AG087', '-AG088', '-AG082', '-AG084', '-AG086'}; % {'MEG'};
-%cfg.latency = [0 0.75]; % time interval over which the experimental 
+cfg.latency = [0 0.75]; % time interval over which the experimental 
                      % conditions must be compared (in seconds)
-latency_cue = [0.385 0.585];%[0.4 0.6];%[0.425 0.55]; % time window for cue-locked effect
-latency_target = [0.2 0.3];%[0.22 0.32];%[0.25 0.3]; % time window for target-locked effect 
+latency_cue = cfg.latency;%[0.385 0.585];%[0.4 0.6];%[0.425 0.55]; % time window for cue-locked effect
+latency_target = cfg.latency;%[0.2 0.3];%[0.22 0.32];%[0.25 0.3]; % time window for target-locked effect 
                             % tried [0.2 0.4], not sig
 
 load([ResultsFolder 'neighbours.mat']); % this is the sensor layout - it's the same for all subjects (even same across experiments). So just prepare once & save, then load here
 cfg.neighbours = neighbours;  % same as defined for the between-trials experiment
 
-cfg.avgovertime = 'yes'; % if yes, this will average over the entire time window chosen in cfg.latency 
+cfg.avgovertime = 'no'; % if yes, this will average over the entire time window chosen in cfg.latency 
                         % (useful when you want to look at a particular component, e.g. to look at M100,
                         % cfg.latency = [0.08 0.12]; cfg.avgovertime = 'yes'; )
 cfg.method = 'montecarlo';
@@ -144,7 +151,7 @@ cfg.tail = 0;
 cfg.clustertail = 0; % 2 tailed test
 cfg.alpha = 0.05;
 cfg.correcttail = 'prob'; % correct for 2-tailedness
-cfg.numrandomization = 1000; % Rule of thumb: use 500, and double this number if it turns out 
+cfg.numrandomization = 500; % Rule of thumb: use 500, and double this number if it turns out 
     % that the p-value differs from the critical alpha-level (0.05 or 0.01) by less than 0.02
 
 numSubjects = length(files);
@@ -212,7 +219,7 @@ fprintf('\nTARGET window -> Main effect of ttype:\n');
 cfg.latency = latency_target; % time interval over which the experimental 
 [target_ttype] = ft_timelockstatistics(cfg, allSubj_target_stay{:}, allSubj_target_switch{:});
 
-%save([ResultsFolder 'stats.mat'], 'cue_interaction', 'cue_lang', 'cue_ttype', 'target_interaction', 'target_lang', 'target_ttype');
+save([ResultsFolder 'stats.mat'], 'cue_interaction', 'cue_lang', 'cue_ttype', 'target_interaction', 'target_lang', 'target_ttype');
 
 
 %% Plotting: use ft_clusterplot & ft_topoplot

@@ -30,6 +30,7 @@ function [all_blocks_clean, response_comp] = reject_response_component(all_block
     % project certain components in the response erf out of all trials
     cfg              = [];
     cfg.component    = 1:5; % select top 5 components in the response erf
-    all_blocks_clean = ft_rejectcomponent(cfg, response_comp, all_blocks); % reject these comps from all trials
-
+    %all_blocks_clean = ft_rejectcomponent(cfg, response_comp, all_blocks); % reject these comps from all trials
+    all_blocks_clean = all_blocks; % noPCA version: cleaned data is same as uncleaned data
+    
 end

@@ -24,8 +24,8 @@ global eventnames;
 common();
 
 S1_output_filename = 'S1_preprocessed_data.mat'; % Stage 1 output (stored inside each Subject folder)
-S2_output_filename = 'S2_after_visual_rejection.mat'; % Stage 2 output (stored inside each Subject folder)
-S3_output_filename = '_erf.mat'; % ERF output (stored in ResultsFolder for all subjects)
+S2_output_filename = 'S2_after_visual_rejection_noPCA.mat'; % Stage 2 output (stored inside each Subject folder)
+S3_output_filename = '_erf_noPCA.mat'; % ERF output (stored in ResultsFolder for all subjects)
 
 
 % enable access to 'SubjectID' from inside "trig_fun_160_...", so that 
@@ -174,7 +174,7 @@ for i = 1:length(SubjectIDs)
         %}
 
         % SAVE all relevant variables from the workspace
-        save([ResultsFolder SubjectID '_erf.mat'], 'SubjectFolder', ...
+        save([ResultsFolder SubjectID S3_output_filename], 'SubjectFolder', ...
             'erf', 'erf_clean', 'erf_cue_combined', 'erf_target_combined');       
     end
 
