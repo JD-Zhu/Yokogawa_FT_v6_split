@@ -6,6 +6,8 @@
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+clear all;
+
 % run the #define section
 global conds_cue; global conds_target; global eventnames;
 global ResultsFolder_ROI; % all subjects' ROI data are stored here
@@ -134,7 +136,7 @@ for k = 1:length(ROIs_label)
     cfg.clustertail = 0; % 2 tailed test
     cfg.alpha = 0.05;
     cfg.correcttail = 'prob'; % correct for 2-tailedness
-    cfg.numrandomization = 500; % Rule of thumb: use 500, and double this number if it turns out 
+    cfg.numrandomization = 1000; % Rule of thumb: use 500, and double this number if it turns out 
         % that the p-value differs from the critical alpha-level (0.05 or 0.01) by less than 0.02
 
     numSubjects = length(files);

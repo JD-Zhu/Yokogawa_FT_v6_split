@@ -34,7 +34,7 @@ function source_v1
 
         elp_file  = dir('*.elp'); % find the .elp file
         if isempty(elp_file) % not a subject folder, skip
-            fprintf('%s: Not a subject folder - skip!', SubjectID);
+            fprintf('\n"%s": Not a subject folder - skip!\n', SubjectID);
             continue;
         end
 
@@ -362,8 +362,8 @@ function source_v1
 
             
             % create virtual sensor for this ROI in cue window
-            %VE = create_virtual_sensor_Centroid(ROI_name, vertices_all, vertices_filters_cue, erf_cue_combined, erf, conds_cue, headmodel, sourcemodel);
-            VE = create_virtual_sensor_SVD(ROI_name, vertices_filters_cue, erf_cue_combined, erf, conds_cue); 
+            VE = create_virtual_sensor_Centroid(ROI_name, vertices_all, vertices_filters_cue, erf_cue_combined, erf, conds_cue, headmodel, sourcemodel);
+            %VE = create_virtual_sensor_SVD(ROI_name, vertices_filters_cue, erf_cue_combined, erf, conds_cue); 
             if ~isempty(VE) % successful
                 ROI_activity.(ROI_name) = VE;
             else
@@ -371,8 +371,8 @@ function source_v1
             end
             
             % create virtual sensor for this ROI in target window
-            %VE = create_virtual_sensor_Centroid(ROI_name, vertices_all, vertices_filters_target, erf_target_combined, erf, conds_target, headmodel, sourcemodel);
-            VE = create_virtual_sensor_SVD(ROI_name, vertices_filters_target, erf_target_combined, erf, conds_target);
+            VE = create_virtual_sensor_Centroid(ROI_name, vertices_all, vertices_filters_target, erf_target_combined, erf, conds_target, headmodel, sourcemodel);
+            %VE = create_virtual_sensor_SVD(ROI_name, vertices_filters_target, erf_target_combined, erf, conds_target);
             if ~isempty(VE) % successful
                 for j = conds_target  % append to existing cue-window results
                     ROI_activity.(ROI_name).(eventnames{j}) = VE.(eventnames{j});
