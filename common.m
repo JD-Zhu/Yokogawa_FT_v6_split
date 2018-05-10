@@ -10,7 +10,11 @@ function [] = common()
     DataFolder = [pwd '\\..\\..\\RAW_DATA\\'];
     ResultsFolder = [pwd '\\..\\..\\results_ERF\\']; % all subjects' erf data will be stored here
     ResultsFolder_ROI = [pwd '\\..\\..\\results_ROI\\']; % all subjects' ROI source-reconstruction results will be stored here
-
+    
+    global filename_suffix; % select which pre-processing option: noPCA, reject components 1:3, or normal (reject components 1:5)
+    % also need to change the last few lines in reject_response_component.m & load correct result files into the ResultsFolder
+    filename_suffix = '_rejectTop3'; % '_noPCA'; % '';
+    
     % trigger events (DO NOT change the order of this list)
     global eventcodes; global eventnames;
     eventcodes = {{'cuechstay'},{'17'};{'cuechswitch'},{'19'};{'cueenstay'},{'21'};{'cueenswitch'},{'23'}; ...

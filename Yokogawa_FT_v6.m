@@ -19,13 +19,13 @@ clear all % disable this line if u want breakpoints to work
 clc
 
 % run the #define section
-global DataFolder; global ResultsFolder;
+global DataFolder; global ResultsFolder; global filename_suffix; 
 global eventnames;
 common();
 
 S1_output_filename = 'S1_preprocessed_data.mat'; % Stage 1 output (stored inside each Subject folder)
-S2_output_filename = 'S2_after_visual_rejection_noPCA.mat'; % Stage 2 output (stored inside each Subject folder)
-S3_output_filename = '_erf_noPCA.mat'; % ERF output (stored in ResultsFolder for all subjects)
+S2_output_filename = ['S2_after_visual_rejection' filename_suffix '.mat']; % Stage 2 output (stored inside each Subject folder)
+S3_output_filename = ['_erf' filename_suffix '.mat']; % ERF output (stored in ResultsFolder for all subjects)
 
 
 % enable access to 'SubjectID' from inside "trig_fun_160_...", so that 

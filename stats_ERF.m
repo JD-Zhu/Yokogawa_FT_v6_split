@@ -4,6 +4,7 @@ clear all;
 % run the #define section
 global conds_cue; global conds_target; global eventnames;
 global ResultsFolder; % all subjects' erf data are stored here
+global filename_suffix; % erf results file suffix
 common();
 
 % remove the 'response' event type, leaving us with 8 actual event types
@@ -26,7 +27,7 @@ allSubjects_erf.targetenswitch = {};
 %% Read data
 
 % find all .mat files in ResultsFolder
-files = dir([ResultsFolder '*_erf.mat']);
+files = dir([ResultsFolder '*_erf' filename_suffix '.mat']);
 
 % each cycle reads in one '.mat' file (ie. one subject's erf data)
 for i = 1:length(files)

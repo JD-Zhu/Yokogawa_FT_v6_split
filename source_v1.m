@@ -8,7 +8,7 @@ function source_v1
     %addpath([pwd '\\coreg-master\\']); % allow access to coreg scripts
 
     % run the #define section
-    global DataFolder; global ResultsFolder; global ResultsFolder_ROI;
+    global DataFolder; global ResultsFolder; global ResultsFolder_ROI; global filename_suffix; 
     global eventnames; global conds_cue; global conds_target;
     common();
 
@@ -71,7 +71,7 @@ function source_v1
 
 
         %% Step 2: load this subject's ERF results
-        subject_data = load([ResultsFolder SubjectID '_erf_noPCA.mat']);
+        subject_data = load([ResultsFolder SubjectID '_erf' filename_suffix '.mat']);
         erf = subject_data.erf_clean;
         erf_cue_combined = subject_data.erf_cue_combined;
         erf_target_combined = subject_data.erf_target_combined;
@@ -362,8 +362,8 @@ function source_v1
 
             
             % create virtual sensor for this ROI in cue window
-            VE = create_virtual_sensor_Centroid(ROI_name, vertices_all, vertices_filters_cue, erf_cue_combined, erf, conds_cue, headmodel, sourcemodel);
-            %VE = create_virtual_sensor_SVD(ROI_name, vertices_filters_cue, erf_cue_combined, erf, conds_cue); 
+            %VE = create_virtual_sensor_Centroid(ROI_name, vertices_all, vertices_filters_cue, erf_cue_combined, erf, conds_cue, headmodel, sourcemodel);
+            VE = create_virtual_sensor_SVD(ROI_name, vertices_filters_cue, erf_cue_combined, erf, conds_cue); 
             if ~isempty(VE) % successful
                 ROI_activity.(ROI_name) = VE;
             else
@@ -371,8 +371,8 @@ function source_v1
             end
             
             % create virtual sensor for this ROI in target window
-            VE = create_virtual_sensor_Centroid(ROI_name, vertices_all, vertices_filters_target, erf_target_combined, erf, conds_target, headmodel, sourcemodel);
-            %VE = create_virtual_sensor_SVD(ROI_name, vertices_filters_target, erf_target_combined, erf, conds_target);
+            %VE = create_virtual_sensor_Centroid(ROI_name, vertices_all, vertices_filters_target, erf_target_combined, erf, conds_target, headmodel, sourcemodel);
+            VE = create_virtual_sensor_SVD(ROI_name, vertices_filters_target, erf_target_combined, erf, conds_target);
             if ~isempty(VE) % successful
                 for j = conds_target  % append to existing cue-window results
                     ROI_activity.(ROI_name).(eventnames{j}) = VE.(eventnames{j});
