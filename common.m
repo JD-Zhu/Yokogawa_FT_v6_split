@@ -13,7 +13,7 @@ function [] = common()
     
     global filename_suffix; % select which pre-processing option: noPCA, reject components 1:3, or normal (reject components 1:5)
     % also need to change the last few lines in reject_response_component.m & load correct result files into the ResultsFolder
-    filename_suffix = '_rejectTop3'; % '_noPCA'; % '';
+    filename_suffix = ''; % '_noPCA'; %'_rejectTop3'; %'';
     
     % trigger events (DO NOT change the order of this list)
     global eventcodes; global eventnames;

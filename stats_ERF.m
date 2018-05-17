@@ -127,14 +127,14 @@ cfg = [];
 cfg.channel = {'all', '-AG083', '-AG087', '-AG088', '-AG082', '-AG084', '-AG086'}; % {'MEG'};
 cfg.latency = [0 0.75]; % time interval over which the experimental 
                      % conditions must be compared (in seconds)
-latency_cue = cfg.latency;%[0.385 0.585];%[0.4 0.6];%[0.425 0.55]; % time window for cue-locked effect
-latency_target = cfg.latency;%[0.2 0.3];%[0.22 0.32];%[0.25 0.3]; % time window for target-locked effect 
+latency_cue = [0.408 0.683];%[0.385 0.585];%[0.4 0.6];%[0.425 0.55]; % time window for cue-locked effect
+latency_target = [0.2 0.3];%[0.22 0.32];%[0.25 0.3]; % time window for target-locked effect 
                             % tried [0.2 0.4], not sig
 
 load([ResultsFolder 'neighbours.mat']); % this is the sensor layout - it's the same for all subjects (even same across experiments). So just prepare once & save, then load here
 cfg.neighbours = neighbours;  % same as defined for the between-trials experiment
 
-cfg.avgovertime = 'no'; % if yes, this will average over the entire time window chosen in cfg.latency 
+cfg.avgovertime = 'yes'; % if yes, this will average over the entire time window chosen in cfg.latency 
                         % (useful when you want to look at a particular component, e.g. to look at M100,
                         % cfg.latency = [0.08 0.12]; cfg.avgovertime = 'yes'; )
 cfg.method = 'montecarlo';
