@@ -1,14 +1,32 @@
+%{
+%TODO: add data_format input arg. 
+
+if 'eeglab', then use new fns I will write now.
+if 'fieldtrip', use existing fns.
+
+Add a new layer of "triage" fns to distinguish btwn these 2 formats?
+
+For the actual implementation (subfunctions), refer to stats_ERF.m
+(.avg field can be 2d matrix, and can simply do average on that)
+%}
+
+
 % combine_conds_for_T_test.m 
 %
 % Reduce multiple conditions down to 2 conditions, so that they can be
-% submitted to ft_timelockstatistics for statistical comparison.
+% submitted to ft_timelockstatistics / ept_TFCE for statistical comparison.
 %
-% 3 types of effect can be tested in a 2x2 design:
+% @param data_format: 'eeglab' or 'fieldtrip'
+%    'eeglab' format = 3d matrix of values (subj x chan x time)
+% 'fieldtrip' format = cell array of subjects, each cell containing the timelock struct for one subject
+%
+% @param type_of_effect: 'main_12vs34', 'main_13vs24', or 'interaction',
+% corresponding to the 3 types of effect which can be tested in a 2x2 design:
 % - main effect of lang (1+2 vs 3+4)
 % - main effect of ttype (1+3 vs 2+4)
 % - interaction (2-1 vs 4-3)
 %
-function [timelock1, timelock2] = combine_conds_for_T_test(type_of_effect, chstay, chswitch, enstay, enswitch)
+function [timelock1, timelock2] = combine_conds_for_T_test(data_format, type_of_effect, chstay, chswitch, enstay, enswitch)
     % which type of effect do you want to test? 
     if strcmp(type_of_effect, 'interaction')
         [timelock1, timelock2] = interaction_2x2(chstay, chswitch, enstay, enswitch);
