@@ -165,8 +165,13 @@ cfg.design = within_design_2x2;
 cfg.uvar  = 1; % row of design matrix that contains unit variable (in this case: subjects)
 cfg.ivar  = 2; % row of design matrix that contains independent variable (i.e. the conditions)
 
+
+% Run the statistical tests
+data = allSubjects_erf; % make an easy name
+
 % Interaction (i.e. calc sw$ in each lang, then test the 2 sw$)
 % http://www.fieldtriptoolbox.org/faq/how_can_i_test_an_interaction_effect_using_cluster-based_permutation_tests
+%{
 for i = 1:numSubjects
     allSubj_cue_ch_switchCost{i} = allSubjects_erf.cuechstay{i}; % difference btwn chstay & chswitch (calc'd on next line)
     allSubj_cue_ch_switchCost{i}.avg = allSubjects_erf.cuechswitch{i}.avg - allSubjects_erf.cuechstay{i}.avg; % chswitch - chstay
@@ -177,14 +182,19 @@ for i = 1:numSubjects
     allSubj_target_en_switchCost{i} = allSubjects_erf.targetenstay{i};
     allSubj_target_en_switchCost{i}.avg = allSubjects_erf.targetenswitch{i}.avg - allSubjects_erf.targetenstay{i}.avg; % enswitch - enstay
 end
+%}
+% manual calculation above is now replaced by combine_conds_for_T_Test()
 fprintf('\nCUE window -> Testing lang x ttype interaction:\n');
+[timelock1, timelock2] = combine_conds_for_T_test('fieldtrip', 'interaction', data.cuechstay, data.cuechswitch, data.cueenstay, data.cueenswitch);
 cfg.latency = latency_cue; % time interval over which the experimental 
-[cue_interaction] = ft_timelockstatistics(cfg, allSubj_cue_ch_switchCost{:}, allSubj_cue_en_switchCost{:});
+[cue_interaction] = ft_timelockstatistics(cfg, timelock1{:}, timelock2{:}); %allSubj_cue_ch_switchCost{:}, allSubj_cue_en_switchCost{:});
 fprintf('\nTARGET window -> Testing lang x ttype interaction:\n');
+[timelock1, timelock2] = combine_conds_for_T_test('fieldtrip', 'interaction', data.targetchstay, data.targetchswitch, data.targetenstay, data.targetenswitch); %'2-1 vs 4-3');
 cfg.latency = latency_target; % time interval over which the experimental 
-[target_interaction] = ft_timelockstatistics(cfg, allSubj_target_ch_switchCost{:}, allSubj_target_en_switchCost{:});
+[target_interaction] = ft_timelockstatistics(cfg, timelock1{:}, timelock2{:}); %allSubj_target_ch_switchCost{:}, allSubj_target_en_switchCost{:});
 
 % Main effect of lang (collapse across stay-switch)
+%{
 for i = 1:numSubjects
     allSubj_cue_ch{i} = allSubjects_erf.cuechstay{i};
     allSubj_cue_ch{i}.avg = (allSubjects_erf.cuechstay{i}.avg + allSubjects_erf.cuechswitch{i}.avg) / 2; % cue_ch_all.avg = (cuechstay.avg + cuechsw.avg) / 2
@@ -195,14 +205,18 @@ for i = 1:numSubjects
     allSubj_target_en{i} = allSubjects_erf.targetenstay{i};
     allSubj_target_en{i}.avg = (allSubjects_erf.targetenstay{i}.avg + allSubjects_erf.targetenswitch{i}.avg) / 2;    
 end
+%}
 fprintf('\nCUE window -> Main effect of lang:\n');
+[timelock1, timelock2] = combine_conds_for_T_test('fieldtrip', 'main_12vs34', data.cuechstay, data.cuechswitch, data.cueenstay, data.cueenswitch);
 cfg.latency = latency_cue; % time interval over which the experimental 
-[cue_lang] = ft_timelockstatistics(cfg, allSubj_cue_ch{:}, allSubj_cue_en{:});
+[cue_lang] = ft_timelockstatistics(cfg, timelock1{:}, timelock2{:}); %allSubj_cue_ch{:}, allSubj_cue_en{:});
 fprintf('\nTARGET window -> Main effect of lang:\n');
+[timelock1, timelock2] = combine_conds_for_T_test('fieldtrip', 'main_12vs34', data.targetchstay, data.targetchswitch, data.targetenstay, data.targetenswitch); %'2-1 vs 4-3');
 cfg.latency = latency_target; % time interval over which the experimental 
-[target_lang] = ft_timelockstatistics(cfg, allSubj_target_ch{:}, allSubj_target_en{:});
+[target_lang] = ft_timelockstatistics(cfg, timelock1{:}, timelock2{:}); %allSubj_target_ch{:}, allSubj_target_en{:});
 
 % Main effect of switch (collapse across langs)
+%{
 for i = 1:numSubjects
     allSubj_cue_stay{i} = allSubjects_erf.cuechstay{i};
     allSubj_cue_stay{i}.avg = (allSubjects_erf.cuechstay{i}.avg + allSubjects_erf.cueenstay{i}.avg) / 2;
@@ -213,12 +227,15 @@ for i = 1:numSubjects
     allSubj_target_switch{i} = allSubjects_erf.targetchswitch{i};
     allSubj_target_switch{i}.avg = (allSubjects_erf.targetchswitch{i}.avg + allSubjects_erf.targetenswitch{i}.avg) / 2;
 end
+%}
 fprintf('\nCUE window -> Main effect of ttype:\n');
+[timelock1, timelock2] = combine_conds_for_T_test('fieldtrip', 'main_13vs24', data.cuechstay, data.cuechswitch, data.cueenstay, data.cueenswitch);
 cfg.latency = latency_cue; % time interval over which the experimental 
-[cue_ttype] = ft_timelockstatistics(cfg, allSubj_cue_stay{:}, allSubj_cue_switch{:});
+[cue_ttype] = ft_timelockstatistics(cfg, timelock1{:}, timelock2{:}); %allSubj_cue_stay{:}, allSubj_cue_switch{:});
 fprintf('\nTARGET window -> Main effect of ttype:\n');
+[timelock1, timelock2] = combine_conds_for_T_test('fieldtrip', 'main_13vs24', data.targetchstay, data.targetchswitch, data.targetenstay, data.targetenswitch); %'2-1 vs 4-3');
 cfg.latency = latency_target; % time interval over which the experimental 
-[target_ttype] = ft_timelockstatistics(cfg, allSubj_target_stay{:}, allSubj_target_switch{:});
+[target_ttype] = ft_timelockstatistics(cfg, timelock1{:}, timelock2{:}); %allSubj_target_stay{:}, allSubj_target_switch{:});
 
 save([ResultsFolder 'stats.mat'], 'cue_interaction', 'cue_lang', 'cue_ttype', 'target_interaction', 'target_lang', 'target_ttype');
 
