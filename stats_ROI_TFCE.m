@@ -22,16 +22,13 @@ function stats_ROI_TFCE()
 
     %% Read data
 
-    % initialise this variable (to enable loading without error)
-    ROI_activity = [];
-
     % find all .mat files in ResultsFolder_ROI
     files = dir([ResultsFolder_ROI '*_ROI.mat']);
 
     % each cycle reads in one '.mat' file (ie. one subject's ROI results)
     for i = 1:length(files)
         filename = [ResultsFolder_ROI files(i).name];
-        load(filename);
+        ROI_activity = []; load(filename); % initialise the variable first to enable loading without error
         allSubjects_ROIs_bySubjects(i) = ROI_activity;
     end
 
@@ -70,7 +67,11 @@ function stats_ROI_TFCE()
         end
     end
 
+    % save the 'time' field from any condition - to be used below (in reading out the time interval of effect)
+    %time_field = allSubjects_ROIs.RIFG.cuechstay{1,1}.time; 
+    %save([ResultsFolder_ROI 'time_field.mat'], 'time_field');
 
+    
     %% Statistical analysis using TFCE method
 
     fprintf('\n= STATS: Threshold-free cluster enhancement (TFCE method) =\n');
@@ -115,12 +116,13 @@ function stats_ROI_TFCE()
 
     
     %% Find the effects & plot them
-%{
+
     % Automatically check all the stats output & read out the time interval
     % of each effect (from the stat.mask field)
 
-    stats = load([ResultsFolder_ROI 'stats.mat']);
-    load([ResultsFolder_ROI 'GA.mat']); % if you don't have this file, run stats_ROI.m to obtain it
+    stats = load([ResultsFolder_ROI 'stats_TFCE.mat']);
+    time_field = []; load([ResultsFolder_ROI 'time_field.mat']) % used for reading out the time interval of effect
+    GA = []; load([ResultsFolder_ROI 'GA.mat']); % if you don't have this file, run stats_ROI.m to obtain it
     fprintf('\nThe following effects were detected:\n');
 
     % loop thru all 6 stats output (cue/target lang/ttype/interxn) and loop thru all ROIs in each,
@@ -131,16 +133,16 @@ function stats_ROI_TFCE()
         ROIs_names = fieldnames(stats.(stat_name)); % get the list of ROI names
         for k = 1:length(ROIs_names) % each cycle handles one ROI
             ROI_name = ROIs_names{k};
+            pvalues = stats.(stat_name).(ROI_name).P_Values; % get the p-values
+            pvalues = pvalues(1,:); % look at the 1st channel only, since the 2nd channel is a "fake" one we created (identical to 1st channel)
+            
             % if any p-value is sig, that's an effect
-            effect = find(stats.(stat_name).(ROI_name).P_Values < 0.05); %TODO: read out the correct time interval.
-                                                                         %have a look at example effects in my email,
-                                                                         %check the corresponding stats.stat_name.ROI_name entry to see how the index is organised -> it goes vertical then next col, so maybe index / 2 would give the time point
+            effect = find(pvalues < 0.05);
             if ~isempty(effect) % if there is an effect, we print it out
-                %time_points = sprintf(' %d', effect);
-                %fprintf('%s has an effect in %s, at these time points:%s.\n', ROI_name, stat_name, time_points);            
-                start_time = stats.(stat_name).(ROI_name).time(effect(1));
-                end_time = stats.(stat_name).(ROI_name).time(effect(end));
-                fprintf('%s has an effect in %s, between %.f~%.f ms.\n', ROI_name, stat_name, start_time*1000, end_time*1000); % convert units to ms
+                time_points = sprintf(' %d', effect);
+                start_time = time_field(effect(1));
+                end_time = time_field(effect(end)); %NOTE: we are assuming the effect is continuous here (which is prob true in most cases). But really should check this!! (which is why we output the samples / time points below)
+                fprintf('%s has an effect in %s, between %.f~%.f ms (significant at samples:%s). p = %f\n', ROI_name, stat_name, start_time*1000, end_time*1000, time_points, min(pvalues(effect))); % convert units to ms
 
                 % plot the effect period, overlaid onto the GA plot for this ROI
                 if strcmp(stat_name(1:3), 'cue') % this effect occurs in cue window
@@ -174,7 +176,7 @@ function stats_ROI_TFCE()
             end
         end
     end
-%}
+
     %%
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % SUBFUNCTIONS
@@ -187,9 +189,11 @@ function stats_ROI_TFCE()
             'type', 'd', ...
             'flag_ft', true, ...
             'flag_tfce', true, ... % set this to 'true' to use the TFCE method
-            'nPerm', 1000, ...
+            'nPerm', 2000, ...
             'rSample', 200, ...
-            'saveName', [ResultsFolder_ROI 'TFCE_temp\\ept_' ROI_name '.mat']); % set a location to temporarily store the output. we don't need to save it, but if you don't set a location, it will litter arond your current directory
+            'plots', true, ...
+            'flag_save', false);
+            %'saveName', [ResultsFolder_ROI 'TFCE_temp\\ept_' ROI_name '.mat']); % set a location to temporarily store the output. we don't need to save it, but if you don't set a location, it will litter arond your current directory
     end
 
 end
