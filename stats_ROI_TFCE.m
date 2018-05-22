@@ -70,7 +70,7 @@ function stats_ROI_TFCE()
     % save the 'time' field from any condition - to be used below (in reading out the time interval of effect)
     %time_field = allSubjects_ROIs.RIFG.cuechstay{1,1}.time; 
     %save([ResultsFolder_ROI 'time_field.mat'], 'time_field');
-
+    
     
     %% Statistical analysis using TFCE method
 
@@ -83,32 +83,33 @@ function stats_ROI_TFCE()
         fprintf(['\nROI: ' ROI_name '\n']);
 
         data = allSubjects_ROIs_eeglab.(ROI_name); % data for the current ROI
+        time_field = []; load([ResultsFolder_ROI 'time_field.mat']) % used for cropping the timecourse to select time window for analysis, in myWrapper_ept_TFCE()
 
         % run TFCE
                 
         % Interaction (i.e. calc sw$ in each lang, then submit the 2 sw$ for comparison)
         fprintf('\nCUE window -> Testing lang x ttype interaction:\n');
         [timelock1, timelock2] = combine_conds_for_T_test('eeglab', 'interaction', data.cuechstay, data.cuechswitch, data.cueenstay, data.cueenswitch);
-        [cue_interaction.(ROI_name)] = myWrapper_ept_TFCE(timelock1, timelock2);
+        [cue_interaction.(ROI_name)] = myWrapper_ept_TFCE(timelock1, timelock2, time_field);
         fprintf('\nTARGET window -> Testing lang x ttype interaction:\n');
         [timelock1, timelock2] = combine_conds_for_T_test('eeglab', 'interaction', data.targetchstay, data.targetchswitch, data.targetenstay, data.targetenswitch); %'2-1 vs 4-3');
-        [target_interaction.(ROI_name)] = myWrapper_ept_TFCE(timelock1, timelock2);
+        [target_interaction.(ROI_name)] = myWrapper_ept_TFCE(timelock1, timelock2, time_field);
     
         % Main effect of lang (collapse across stay-switch)
         fprintf('\nCUE window -> Main effect of lang:\n');
         [timelock1, timelock2] = combine_conds_for_T_test('eeglab', 'main_12vs34', data.cuechstay, data.cuechswitch, data.cueenstay, data.cueenswitch);
-        [cue_lang.(ROI_name)] = myWrapper_ept_TFCE(timelock1, timelock2);
+        [cue_lang.(ROI_name)] = myWrapper_ept_TFCE(timelock1, timelock2, time_field);
         fprintf('\nTARGET window -> Main effect of lang:\n');
         [timelock1, timelock2] = combine_conds_for_T_test('eeglab', 'main_12vs34', data.targetchstay, data.targetchswitch, data.targetenstay, data.targetenswitch); %'2-1 vs 4-3');
-        [target_lang.(ROI_name)] = myWrapper_ept_TFCE(timelock1, timelock2);
+        [target_lang.(ROI_name)] = myWrapper_ept_TFCE(timelock1, timelock2, time_field);
 
         % Main effect of switch (collapse across langs)
         fprintf('\nCUE window -> Main effect of ttype:\n');
         [timelock1, timelock2] = combine_conds_for_T_test('eeglab', 'main_13vs24', data.cuechstay, data.cuechswitch, data.cueenstay, data.cueenswitch);
-        [cue_ttype.(ROI_name)] = myWrapper_ept_TFCE(timelock1, timelock2);
+        [cue_ttype.(ROI_name)] = myWrapper_ept_TFCE(timelock1, timelock2, time_field);
         fprintf('\nTARGET window -> Main effect of ttype:\n');
         [timelock1, timelock2] = combine_conds_for_T_test('eeglab', 'main_13vs24', data.targetchstay, data.targetchswitch, data.targetenstay, data.targetenswitch); %'2-1 vs 4-3');
-        [target_ttype.(ROI_name)] = myWrapper_ept_TFCE(timelock1, timelock2);
+        [target_ttype.(ROI_name)] = myWrapper_ept_TFCE(timelock1, timelock2, time_field);
 
     end
     
@@ -118,7 +119,7 @@ function stats_ROI_TFCE()
     %% Find the effects & plot them
 
     % Automatically check all the stats output & read out the time interval
-    % of each effect (from the stat.mask field)
+    % of each effect (from the stat.P_Values field)
 
     stats = load([ResultsFolder_ROI 'stats_TFCE.mat']);
     time_field = []; load([ResultsFolder_ROI 'time_field.mat']) % used for reading out the time interval of effect
@@ -183,7 +184,15 @@ function stats_ROI_TFCE()
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     % wrapper function for calling ept_TFCE(), so that settings only need to be changed in one place
-    function Results = myWrapper_ept_TFCE(data1, data2)
+    function Results = myWrapper_ept_TFCE(data1, data2, time_field)
+
+        % select the time window of interest (0~750ms only),
+        % by cropping this portion from the original timecourse (-1~1s)        
+        start_sample = find(time_field<0.0001, 1, 'last'); % find the index of the sample at 0ms (don't use the exact number '0', coz the actual time recorded is sth like -5.4845e-14 second
+        end_sample = find(time_field>0.7499, 1, 'first'); % find the index of the sample at 750ms
+        data1 = data1(:,:,start_sample:end_sample);
+        data2 = data2(:,:,start_sample:end_sample);
+        
         Results = ept_TFCE(data1, data2, ...
             [], ...
             'type', 'd', ...
@@ -194,6 +203,7 @@ function stats_ROI_TFCE()
             'plots', true, ...
             'flag_save', false);
             %'saveName', [ResultsFolder_ROI 'TFCE_temp\\ept_' ROI_name '.mat']); % set a location to temporarily store the output. we don't need to save it, but if you don't set a location, it will litter arond your current directory
+
     end
 
 end
