@@ -46,22 +46,8 @@ function stats_ROI_TFCE()
     for k = 1:length(ROIs_label)
         ROI_name = ROIs_label{k};
 
-        for j = 1:length(eventnames_8) % loop thru each condition, to create the 3d matrix for this cond
-            data_for_this_cond = allSubjects_ROIs.(ROI_name).(eventnames_8{j});
-            subj_chan_time = []; % initialise the 3d matrix for this condition
-
-            for subject = 1:length(data_for_this_cond) % loop thru all subjects
-                % because the format requires a "channel" dimension, fake that by making 2 copies of the only channel (so we now have 2 channels)
-                chan_time = vertcat(data_for_this_cond{subject}.avg, data_for_this_cond{subject}.avg);
-                % add this subject's "chan x time" matrix to the 3d matrix
-                subj_chan_time = cat(3, subj_chan_time, chan_time); % concatenate along the 3rd dimension
-            end
-            % subj_chan_time is now the 3d matrix containing all subjects ("subject" being the 3rd dimension)
-            % change the order of matrix dimensions to: subj x chan x time
-            subj_chan_time = permute(subj_chan_time, [3 1 2]); 
-
-            % store the 3d matrix in new variable (eeglab format), under the correct ROI & condition name
-            allSubjects_ROIs_eeglab.(ROI_name).(eventnames_8{j}) = subj_chan_time; 
+        for j = 1:length(eventnames_8) % loop thru each condition, convert it to eeglab format
+            allSubjects_ROIs_eeglab.(ROI_name).(eventnames_8{j}) = convert_FT_to_eeglab(allSubjects_ROIs.(ROI_name).(eventnames_8{j}); 
             %allSubjects_ROIs_eeglab.(ROI_name).(eventnames_8{j}).label = ROI_name;
             %allSubjects_ROIs_eeglab.(ROI_name).(eventnames_8{j}).dimord = 'subj_chan_time';
         end
@@ -204,11 +190,36 @@ function stats_ROI_TFCE()
         data1 = data1(:,:,start_sample:end_sample);
         data2 = data2(:,:,start_sample:end_sample);
         
+        % the input format to TFCE requires a "channel" dimension, so we check this
+        % https://github.com/Mensen/ept_TFCE-matlab/issues/21
+        if (size(data1, 2) == 1) % if there is only 1 channel (e.g. ROI result),
+                                 % we fake a 2nd channel by making a copy of the 1st channel
+            data1 = repmat(data1, [1,2,1]);
+            data2 = repmat(data2, [1,2,1]);
+            
+            % we also need to treat this data as time-frequency data (so that TFCE won't look for a channel locations file)
+            flag_ft = true;
+            locs.e_loc = [];
+            
+        else % for normal (multi channel) data
+            flag_ft = false;
+            
+            % read channel layout file to generate the locs.e_loc variable
+            addpath(genpath('C:\Users\43606024\Documents\MATLAB\eeglab14_1_1b\'));
+            chanlocs4 = readlocs('C:\\Users\\43606024\\Documents\\MATLAB\\spm12\\EEGtemplates\\biosemi64.sfp');
+            chanlocs4 = chanlocs4(4:end);
+            
+            %TODO: get chan loc file working:
+            %chanlocs4 = readlocs('D:\Judy\Exp1\6_MEG-data\results_ERF\lay.mat');
+            chanlocs = readlocs('D:\Judy\Exp1\6_MEG-data\RAW_DATA\M03-AG-2784\2784_AG_ME155_2017_11_17.elp');
+            % nope - these are the marker coils locations
+        end       
+        
         Results = ept_TFCE(data1, data2, ...
-            [], ...
+            locs.e_loc, ...
             'type', 'd', ...
-            'flag_ft', true, ...
-            'flag_tfce', true, ... % set this to 'true' to use the TFCE method
+            'flag_ft', flag_ft, ...
+            'flag_tfce', true, ...
             'nPerm', 2000, ...
             'rSample', 200, ...
             'flag_save', false);

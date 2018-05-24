@@ -18,15 +18,30 @@ close all
 clear all % disable this line if u want breakpoints to work
 clc
 
+
+% = Settings =
+% Please adjust as required:
+
+channelrepair = true; % repair bad/rejected channels?
+calc_uncleaned_erf = false; % calculate uncleaned erf? (for quality check of response-component rejection)
+
+
+
+%%
 % run the #define section
 global DataFolder; global ResultsFolder; global filename_suffix; 
 global eventnames;
 common();
 
+% check the Settings, and modify stuff accordingly
+%if (channelrepair == true)
+%    ResultsFolder = [ResultsFolder(1:end-2) '_channelrepair\\']; % modify ResultsFolder location
+%end    
+
+% set filenames for saving the output from each stage (so that we don't have to rerun the whole thing from beginning every time)
 S1_output_filename = 'S1_preprocessed_data.mat'; % Stage 1 output (stored inside each Subject folder)
 S2_output_filename = ['S2_after_visual_rejection' filename_suffix '.mat']; % Stage 2 output (stored inside each Subject folder)
 S3_output_filename = ['_erf' filename_suffix '.mat']; % ERF output (stored in ResultsFolder for all subjects)
-
 
 % enable access to 'SubjectID' from inside "trig_fun_160_...", so that 
 % correct code_delay value can be set for each subject (30ms for first 5 subjects, 100ms for the others)
@@ -116,23 +131,34 @@ for i = 1:length(SubjectIDs)
 
     % if haven't already processed this stage before, do it now & save a copy
     if (exist(S3_output_file, 'file') ~= 2)    
-
-        load([SubjectFolder S1_output_filename]); % to load 'all_blocks'
-        load([SubjectFolder S2_output_filename]);
-
+        
         % make sure we have a clean start (i.e. no leftover var contents from last subject)
         clear erf; clear erf_clean;
         clear trials; clear trials_clean;
 
+        load([SubjectFolder S1_output_filename]); % to load 'all_blocks'
+        load([SubjectFolder S2_output_filename]);
+        
+        % perform channel repair if needed
+        if (channelrepair == true)
+            load([ResultsFolder 'neighbours.mat']);
+            all_labels = all_blocks_clean.cfg.channel; % full list of 160 labels
+            all_blocks_clean = repair_bad_channels(all_blocks_clean, neighbours, all_labels);
+            %save([SubjectFolder S2_output_filename(1:end-4) '_channelrepair.mat'], 'all_blocks_clean', 'events_allBlocks', 'response_comp')
+        end    
+
+
         % === ft_redefine all event types (i.e. 8 real conditions + 'response' event) ===
 
         % in uncleaned data
-        for j = 1:length(eventnames)
-            cfg = [];
-            cfg.trials = events_allBlocks.(eventnames{j});
-            trials.(eventnames{j}) = ft_redefinetrial(cfg, all_blocks);
+        if (calc_uncleaned_erf)
+            for j = 1:length(eventnames)
+                cfg = [];
+                cfg.trials = events_allBlocks.(eventnames{j});
+                trials.(eventnames{j}) = ft_redefinetrial(cfg, all_blocks);
+            end
         end
-
+        
         % in cleaned data
         for j = 1:length(eventnames)
             cfg = [];
@@ -151,13 +177,15 @@ for i = 1:length(SubjectIDs)
         % === compute ERFs ===
 
         % in uncleaned data (just for quality check of PCA component rejection)
-        for j = 1:length(eventnames)
-            cfg         = [];
-            %cfg.nanmean = 'yes';
-            %trials.(eventnames{j}) = ft_selectdata(cfg, trials.(eventnames{j})); % Do this because we kept bad trials as NaN
-            erf.(eventnames{j}) = ft_timelockanalysis(cfg, trials.(eventnames{j})); % Do this to create average field and timelock struct
+        if (calc_uncleaned_erf)
+            for j = 1:length(eventnames)
+                cfg         = [];
+                %cfg.nanmean = 'yes';
+                %trials.(eventnames{j}) = ft_selectdata(cfg, trials.(eventnames{j})); % Do this because we kept bad trials as NaN
+                erf.(eventnames{j}) = ft_timelockanalysis(cfg, trials.(eventnames{j})); % Do this to create average field and timelock struct
+            end
         end
-
+        
         % in cleaned data (compute erfs & cov matrices)
         [erf_clean, erf_cue_combined, erf_target_combined] = compute_ERF(trials_clean);
 
@@ -175,9 +203,10 @@ for i = 1:length(SubjectIDs)
 
         % SAVE all relevant variables from the workspace
         save([ResultsFolder SubjectID S3_output_filename], 'SubjectFolder', ...
-            'erf', 'erf_clean', 'erf_cue_combined', 'erf_target_combined');       
+            'erf_clean', 'erf_cue_combined', 'erf_target_combined'); %'erf',       
     end
 
+    
     % === Plot ERF & GFP (can use this to regen all plots from saved erf results) ===
 
     %load([ResultsFolder SubjectID S3_output_filename]);

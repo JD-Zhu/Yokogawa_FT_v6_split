@@ -1,6 +1,14 @@
 close all;
 clear all;
 
+
+% = Settings =
+% Please adjust as required:
+
+channelrepair = false; % repair bad/rejected channels?
+
+
+%%
 % run the #define section
 global conds_cue; global conds_target; global eventnames;
 global ResultsFolder; % all subjects' erf data are stored here
@@ -35,8 +43,18 @@ for i = 1:length(files)
     load(filename);
         
     for j = 1:length(eventnames_8) % 4 conditions in cue & 4 conditions in target (total 8)
+        % perform channel repair if needed
+        if (channelrepair == true)
+            load([ResultsFolder 'neighbours.mat']);
+            load([ResultsFolder 'all_labels.mat']);
+            erf_clean.(eventnames_8{j}) = repair_bad_channels(erf_clean.(eventnames_8{j}), neighbours, all_labels);
+        end
+        % add to allsubjects matrix
         allSubjects_erf.(eventnames_8{j}) = [allSubjects_erf.(eventnames_8{j}) erf_clean.(eventnames_8{j})];
     end
+    
+    % save the new erf after channel repair
+    %save([ResultsFolder 'repaired_erf\\' files(i).name], 'SubjectFolder', 'erf_clean');
 end
 
 
@@ -55,7 +73,7 @@ for j = 1:length(eventnames_8)
     % "{:}" means to use data from all elements of the variable
 end
 
-save([ResultsFolder 'GA_erf_allConditions.mat'], 'GA_erf');
+%save([ResultsFolder 'GA_erf_allConditions.mat'], 'GA_erf');
 
 % multiplot
 %{
@@ -124,22 +142,22 @@ xlim([-0.2 0.75]);
 fprintf('\n= STATS: CLUSTER-BASED PERMUTATION TESTS =\n');
 
 cfg = [];
-cfg.channel = {'all', '-AG083', '-AG087', '-AG088', '-AG082', '-AG084', '-AG086'}; % {'MEG'};
+cfg.channel = {'all'};%, '-AG083', '-AG087', '-AG088', '-AG082', '-AG084', '-AG086'}; % {'MEG'};
 cfg.latency = [0 0.75]; % time interval over which the experimental 
                      % conditions must be compared (in seconds)
-latency_cue = [0.408 0.683];%[0.385 0.585];%[0.4 0.6];%[0.425 0.55]; % time window for cue-locked effect
-latency_target = [0.2 0.3];%[0.22 0.32];%[0.25 0.3]; % time window for target-locked effect 
-                            % tried [0.2 0.4], not sig
+latency_cue =cfg.latency;% [0.408 0.683];%[0.385 0.585];%[0.4 0.6];%[0.425 0.55]; % time window for cue-locked effect
+latency_target =cfg.latency;% [0.2 0.3];%[0.22 0.32];%[0.25 0.3]; % time window for target-locked effect 
+                            % tried [0.15 0.3], [0.2 0.25], [0.2 0.4]. Not sig.
 
 load([ResultsFolder 'neighbours.mat']); % this is the sensor layout - it's the same for all subjects (even same across experiments). So just prepare once & save, then load here
 cfg.neighbours = neighbours;  % same as defined for the between-trials experiment
 
-cfg.avgovertime = 'yes'; % if yes, this will average over the entire time window chosen in cfg.latency 
+cfg.avgovertime = 'no'; % if yes, this will average over the entire time window chosen in cfg.latency 
                         % (useful when you want to look at a particular component, e.g. to look at M100,
                         % cfg.latency = [0.08 0.12]; cfg.avgovertime = 'yes'; )
 cfg.method = 'montecarlo';
 cfg.statistic = 'depsamplesT'; %cfg.statistic = 'ft_statfun_indepsamplesT'; OR 'ft_statfun_depsamplesFmultivariate';
-cfg.correctm = 'cluster'; %'no'; % its common in MEG studies to run uncorrected at alpha = 0.001
+cfg.correctm = 'cluster'; %'no'; % its common in MEG studies to run uncorrected at cfg.alpha = 0.001
 cfg.clusteralpha = 0.05;
 cfg.clusterstatistic = 'maxsum';
 cfg.minnbchan = 3; % minimum number of neighbourhood channels required to be significant 
@@ -150,15 +168,15 @@ cfg.minnbchan = 3; % minimum number of neighbourhood channels required to be sig
 
 cfg.tail = 0;
 cfg.clustertail = 0; % 2 tailed test
-cfg.alpha = 0.05;
+cfg.alpha = 0.05; %0.001
 cfg.correcttail = 'prob'; % correct for 2-tailedness
-cfg.numrandomization = 500; % Rule of thumb: use 500, and double this number if it turns out 
+cfg.numrandomization = 1000; % Rule of thumb: use 500, and double this number if it turns out 
     % that the p-value differs from the critical alpha-level (0.05 or 0.01) by less than 0.02
 
 numSubjects = length(files);
 within_design_2x2 = zeros(2,2*numSubjects);
 within_design_2x2(1,:) = repmat(1:numSubjects,1,2);
-within_design_2x2(2,1:numSubjects)        = 1;
+within_design_2x2(2,1:numSubjects) = 1;
 within_design_2x2(2,numSubjects+1:2*numSubjects) = 2;
 
 cfg.design = within_design_2x2;
@@ -237,7 +255,15 @@ fprintf('\nTARGET window -> Main effect of ttype:\n');
 cfg.latency = latency_target; % time interval over which the experimental 
 [target_ttype] = ft_timelockstatistics(cfg, timelock1{:}, timelock2{:}); %allSubj_target_stay{:}, allSubj_target_switch{:});
 
-save([ResultsFolder 'stats.mat'], 'cue_interaction', 'cue_lang', 'cue_ttype', 'target_interaction', 'target_lang', 'target_ttype');
+% check for effects by searching the .mask field
+effect_cue_interaction = length(find(cue_interaction.mask)) % if not 0, then we have an effect here
+effect_cue_lang = length(find(cue_lang.mask))
+effect_cue_ttype = length(find(cue_ttype.mask))
+effect_target_interaction = length(find(target_interaction.mask))
+effect_target_lang = length(find(target_lang.mask))
+effect_target_ttype = length(find(target_ttype.mask))
+
+%save([ResultsFolder 'stats.mat'], 'cue_interaction', 'cue_lang', 'cue_ttype', 'target_interaction', 'target_lang', 'target_ttype');
 
 
 %% Plotting: use ft_clusterplot & ft_topoplot
@@ -360,7 +386,9 @@ for k = 1:length(j)-1; % create one subplot for each time interval
 end  
 
 %% To plot the actual effect (i.e. average ERF of sig channels)
-% alt: simply go to the multiplotER generated earlier, select the sig channels & plot
+% alt: go to the multiplotER generated earlier, manually select the sig channels & plot
+
+stat = cue_ttype; % can set this to any effect, it's just for reading out the channel labels
 
 % effect in cue window
 cfg        = [];
@@ -370,14 +398,29 @@ cfg.channel = stat.label(find(cue_ttype.mask)); % autoly retrieve sig channels (
 figure('Name','Average ERF of significant channels - cue window');
 ft_singleplotER(cfg, GA_erf.cuechstay, GA_erf.cuechswitch, GA_erf.cueenstay, GA_erf.cueenswitch);
 legend(eventnames_8(conds_cue));
+xlim([-0.2 0.75]);
+
+% if doing avgovertime, plot vertical lines to indicate the time window
+if exist('latency_cue', 'var')
+    line([latency_cue(1) latency_cue(1)], ylim, 'Color','black'); % plot a vertical line at start_time
+    line([latency_cue(end) latency_cue(end)], ylim, 'Color','black'); % plot a vertical line at end_time
+end
+
 
 % effect in target window
 cfg        = [];
-cfg.channel = stat.label(find(target_lang.mask)); % autoly retrieve sig channels (only works with cfg.avgovertime = 'yes')
+cfg.channel = stat.label(find(target_ttype.mask)); % autoly retrieve sig channels (only works with cfg.avgovertime = 'yes')
 
 figure('Name','Average ERF of significant channels - target window');
 ft_singleplotER(cfg, GA_erf.targetchstay, GA_erf.targetchswitch, GA_erf.targetenstay, GA_erf.targetenswitch);
 legend(eventnames_8(conds_target));
+xlim([-0.2 0.75]);
+
+% if doing avgovertime, plot vertical lines to indicate the time window
+if exist('latency_target', 'var')
+    line([latency_target(1) latency_target(1)], ylim, 'Color','black'); % plot a vertical line at start_time
+    line([latency_target(end) latency_target(end)], ylim, 'Color','black'); % plot a vertical line at end_time
+end
 
 
 % Ref code: copied directly from FT_compare_conditions.m

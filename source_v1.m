@@ -1,5 +1,14 @@
 function source_v1
     
+    % = Settings =
+    % Please adjust as required:
+
+    % use which method ('svd' or 'centroid') for collapsing 
+    % all vertices in an ROI into a single virtual sensor?
+    VE_method = 'svd';
+
+    
+    %%
     % NOTE: always run from the "analysis_scripts" folder, to ensure all relative
     % paths work as expected
     cd('D:\Judy\Exp1\6_MEG-data\analysis_scripts\Yokogawa_FT_v6_split');
@@ -362,8 +371,12 @@ function source_v1
 
             
             % create virtual sensor for this ROI in cue window
-            %VE = create_virtual_sensor_Centroid(ROI_name, vertices_all, vertices_filters_cue, erf_cue_combined, erf, conds_cue, headmodel, sourcemodel);
-            VE = create_virtual_sensor_SVD(ROI_name, vertices_filters_cue, erf_cue_combined, erf, conds_cue); 
+            if (strcmp(VE_method, 'centroid'))
+                VE = create_virtual_sensor_Centroid(ROI_name, vertices_all, vertices_filters_cue, erf_cue_combined, erf, conds_cue, headmodel, sourcemodel);
+            else
+                VE = create_virtual_sensor_SVD(ROI_name, vertices_filters_cue, erf_cue_combined, erf, conds_cue); 
+            end
+            
             if ~isempty(VE) % successful
                 ROI_activity.(ROI_name) = VE;
             else
@@ -371,8 +384,12 @@ function source_v1
             end
             
             % create virtual sensor for this ROI in target window
-            %VE = create_virtual_sensor_Centroid(ROI_name, vertices_all, vertices_filters_target, erf_target_combined, erf, conds_target, headmodel, sourcemodel);
-            VE = create_virtual_sensor_SVD(ROI_name, vertices_filters_target, erf_target_combined, erf, conds_target);
+            if (strcmp(VE_method, 'centroid'))
+                VE = create_virtual_sensor_Centroid(ROI_name, vertices_all, vertices_filters_target, erf_target_combined, erf, conds_target, headmodel, sourcemodel);
+            else
+                VE = create_virtual_sensor_SVD(ROI_name, vertices_filters_target, erf_target_combined, erf, conds_target);
+            end
+            
             if ~isempty(VE) % successful
                 for j = conds_target  % append to existing cue-window results
                     ROI_activity.(ROI_name).(eventnames{j}) = VE.(eventnames{j});

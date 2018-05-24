@@ -41,12 +41,11 @@ end
 
 %% Statistical analysis using TFCE method
 
-Just copy from stats_ROI_TFCE.m
+Just copy from stats_ROI_TFCE.m (after modifying it there)
 
-- check ept_TFCE.m to see if it handles NaN values. If not, ask on Github:
-can it work with missing channels? (I rejected some bad channels)
 - use 'lay' file as channel location. Might be able to just read it in using readlocs() from eeglab. 
 If not, have a look at the output of readlocs() & put ur layout file into that structure.
+
 
 
 %{
