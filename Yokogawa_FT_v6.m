@@ -140,11 +140,10 @@ for i = 1:length(SubjectIDs)
         load([SubjectFolder S2_output_filename]);
         
         % perform channel repair if needed
-        if (channelrepair == true)
+        if (channelrepair)
             load([ResultsFolder 'neighbours.mat']);
             all_labels = all_blocks_clean.cfg.channel; % full list of 160 labels
             all_blocks_clean = repair_bad_channels(all_blocks_clean, neighbours, all_labels);
-            %save([SubjectFolder S2_output_filename(1:end-4) '_channelrepair.mat'], 'all_blocks_clean', 'events_allBlocks', 'response_comp')
         end    
 
 
@@ -211,6 +210,11 @@ for i = 1:length(SubjectIDs)
 
     %load([ResultsFolder SubjectID S3_output_filename]);
     %load([ResultsFolder 'lay.mat']); 
-    %plot_ERF(erf, erf_clean, lay);
+    
+    if (calc_uncleaned_erf)
+        %plot_ERF(erf, erf_clean, lay, true);
+    else % clean erf only
+        %plot_ERF([], erf_clean, lay, false);
+    end
     
 end

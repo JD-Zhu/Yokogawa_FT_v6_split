@@ -5,7 +5,9 @@ clear all;
 % = Settings =
 % Please adjust as required:
 
-channelrepair = false; % repair bad/rejected channels?
+% perform channel repair on each subject's ERF?
+channelrepair = false; % only need to do the repair once, we'll save repaired erf in the folder below
+repaired_erf_folder = 'channelrepaired\\'; % need to create this folder first
 
 
 %%
@@ -54,7 +56,9 @@ for i = 1:length(files)
     end
     
     % save the new erf after channel repair
-    %save([ResultsFolder 'repaired_erf\\' files(i).name], 'SubjectFolder', 'erf_clean');
+    if (channelrepair == true)
+        save([ResultsFolder repaired_erf_folder files(i).name], 'SubjectFolder', 'erf_clean');
+    end
 end
 
 
@@ -142,23 +146,23 @@ xlim([-0.2 0.75]);
 fprintf('\n= STATS: CLUSTER-BASED PERMUTATION TESTS =\n');
 
 cfg = [];
-cfg.channel = {'all'};%, '-AG083', '-AG087', '-AG088', '-AG082', '-AG084', '-AG086'}; % {'MEG'};
+cfg.channel = {'all', '-AG083', '-AG087', '-AG088', '-AG082', '-AG084', '-AG086'}; % {'MEG'};
 cfg.latency = [0 0.75]; % time interval over which the experimental 
                      % conditions must be compared (in seconds)
-latency_cue =cfg.latency;% [0.408 0.683];%[0.385 0.585];%[0.4 0.6];%[0.425 0.55]; % time window for cue-locked effect
-latency_target =cfg.latency;% [0.2 0.3];%[0.22 0.32];%[0.25 0.3]; % time window for target-locked effect 
+latency_cue = [0.408 0.683];%[0.385 0.585];%[0.4 0.6];%[0.425 0.55]; % time window for cue-locked effect
+latency_target = [0.2 0.3];%[0.22 0.32];%[0.25 0.3]; % time window for target-locked effect 
                             % tried [0.15 0.3], [0.2 0.25], [0.2 0.4]. Not sig.
 
 load([ResultsFolder 'neighbours.mat']); % this is the sensor layout - it's the same for all subjects (even same across experiments). So just prepare once & save, then load here
 cfg.neighbours = neighbours;  % same as defined for the between-trials experiment
 
-cfg.avgovertime = 'no'; % if yes, this will average over the entire time window chosen in cfg.latency 
+cfg.avgovertime = 'yes'; % if yes, this will average over the entire time window chosen in cfg.latency 
                         % (useful when you want to look at a particular component, e.g. to look at M100,
                         % cfg.latency = [0.08 0.12]; cfg.avgovertime = 'yes'; )
 cfg.method = 'montecarlo';
 cfg.statistic = 'depsamplesT'; %cfg.statistic = 'ft_statfun_indepsamplesT'; OR 'ft_statfun_depsamplesFmultivariate';
 cfg.correctm = 'cluster'; %'no'; % its common in MEG studies to run uncorrected at cfg.alpha = 0.001
-cfg.clusteralpha = 0.05;
+cfg.clusteralpha = 0.05; % threshold for selecting candidate samples to form clusters
 cfg.clusterstatistic = 'maxsum';
 cfg.minnbchan = 3; % minimum number of neighbourhood channels required to be significant 
                    % in order to form a cluster 
@@ -168,10 +172,10 @@ cfg.minnbchan = 3; % minimum number of neighbourhood channels required to be sig
 
 cfg.tail = 0;
 cfg.clustertail = 0; % 2 tailed test
-cfg.alpha = 0.05; %0.001
+cfg.alpha = 0.1; %0.001  % threshold for cluster-level statistics (any cluster with a p-value lower than this will be reported as sig - an entry of '1' in .mask field)
 cfg.correcttail = 'prob'; % correct for 2-tailedness
 cfg.numrandomization = 1000; % Rule of thumb: use 500, and double this number if it turns out 
-    % that the p-value differs from the critical alpha-level (0.05 or 0.01) by less than 0.02
+    % that the p-value differs from the chosen alpha (e.g. 0.05) by less than 0.02
 
 numSubjects = length(files);
 within_design_2x2 = zeros(2,2*numSubjects);
@@ -286,7 +290,7 @@ cfg = [];
 %cfg.zlim = [-5 5]; % set scaling (range of t-values) (usually using automatic is ok) 
 cfg.highlightcolorpos = [1 1 1]; % white for pos clusters
 cfg.highlightcolorneg = [255/255 192/255 203/255]; % pink for neg clusters
-cfg.alpha = 0.05;
+cfg.alpha = 0.1; % any clusters with a p-value below this threshold will be plotted
 %cfg.colorbar = 'yes'; % shows the scaling
 cfg.layout = lay;
 ft_clusterplot(cfg, stat);

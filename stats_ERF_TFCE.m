@@ -1,52 +1,197 @@
-close all;
-clear all;
+function stats_ERF_TFCE()
+    close all;
+    clear all;
 
-% run the #define section
-global conds_cue; global conds_target; global eventnames;
-global ResultsFolder; % all subjects' erf data are stored here
-global filename_suffix; % erf results file suffix
-common();
+    % run the #define section
+    global conds_cue; global conds_target; global eventnames;
+    global ResultsFolder; % all subjects' erf data are stored here
+    global filename_suffix; % erf results file suffix
+    common();
 
-% remove the 'response' event type, leaving us with 8 actual event types
-eventnames_8 = eventnames(1:8);
-
-
-% initialise allSubjects_erf (each field holds all subjects' erf in that condition)
-allSubjects_erf.cuechstay = {};
-allSubjects_erf.cuechswitch = {};
-allSubjects_erf.cueenstay = {};
-allSubjects_erf.cueenswitch = {};
-
-allSubjects_erf.targetchstay = {};
-allSubjects_erf.targetchswitch = {};
-allSubjects_erf.targetenstay = {};
-allSubjects_erf.targetenswitch = {};
+    % remove the 'response' event type, leaving us with 8 actual event types
+    eventnames_8 = eventnames(1:8);
 
 
-%% Read data
+    % initialise allSubjects_erf (each field holds all subjects' erf in that condition)
+    allSubjects_erf.cuechstay = {};
+    allSubjects_erf.cuechswitch = {};
+    allSubjects_erf.cueenstay = {};
+    allSubjects_erf.cueenswitch = {};
 
-% find all .mat files in ResultsFolder
-files = dir([ResultsFolder '*_erf' filename_suffix '.mat']);
+    allSubjects_erf.targetchstay = {};
+    allSubjects_erf.targetchswitch = {};
+    allSubjects_erf.targetenstay = {};
+    allSubjects_erf.targetenswitch = {};
 
-% each cycle reads in one '.mat' file (ie. one subject's erf data)
-for i = 1:length(files)
-    filename = [ResultsFolder files(i).name];
-    load(filename);
+
+    %% Read data
+
+    % find all .mat files in ResultsFolder
+    files = dir([ResultsFolder '*_erf' filename_suffix '.mat']);
+
+    % each cycle reads in one '.mat' file (ie. one subject's erf data)
+    for i = 1:length(files)
+        filename = [ResultsFolder files(i).name];
+        temp = load(filename);
+        erf_clean = temp.erf_clean;
+
+        for j = 1:length(eventnames_8) % 4 conditions in cue & 4 conditions in target (total 8)
+            allSubjects_erf.(eventnames_8{j}) = [allSubjects_erf.(eventnames_8{j}) erf_clean.(eventnames_8{j})];
+        end
+    end
+
+    % reformat again into eeglab format (which TFCE accepts):
+    % each condition contains a 3d ("subject x channel x time") matrix
+    for j = 1:length(eventnames_8) % loop thru each condition, convert it to eeglab format
+        allSubjects_erf_eeglab.(eventnames_8{j}) = convert_FT_to_eeglab(allSubjects_erf.(eventnames_8{j})); 
+    end
+
+    
+    %% Statistical analysis using TFCE method
+
+    fprintf('\n= STATS: Threshold-free cluster enhancement (TFCE method) =\n');
+
+    % load start_sample & end_sample, for use in myWrapper_ept_TFCE()
+    % used for cropping data to match the selected time interval for analysis
+    temp = load([ResultsFolder 'time_field.mat']);
+    start_sample = temp.start_sample;
+    end_sample = temp.end_sample;
+  
+    data = allSubjects_erf_eeglab;
         
-    for j = 1:length(eventnames_8) % 4 conditions in cue & 4 conditions in target (total 8)
-        allSubjects_erf.(eventnames_8{j}) = [allSubjects_erf.(eventnames_8{j}) erf_clean.(eventnames_8{j})];
+    % run TFCE
+
+    % Interaction (i.e. calc sw$ in each lang, then submit the 2 sw$ for comparison)
+    fprintf('\nCUE window -> Testing lang x ttype interaction:\n');
+    [timelock1, timelock2] = combine_conds_for_T_test('eeglab', 'interaction', data.cuechstay, data.cuechswitch, data.cueenstay, data.cueenswitch);
+    [cue_interaction] = myWrapper_ept_TFCE(timelock1, timelock2, start_sample, end_sample);
+    fprintf('\nTARGET window -> Testing lang x ttype interaction:\n');
+    [timelock1, timelock2] = combine_conds_for_T_test('eeglab', 'interaction', data.targetchstay, data.targetchswitch, data.targetenstay, data.targetenswitch); %'2-1 vs 4-3');
+    [target_interaction] = myWrapper_ept_TFCE(timelock1, timelock2, start_sample, end_sample);
+
+    % Main effect of lang (collapse across stay-switch)
+    fprintf('\nCUE window -> Main effect of lang:\n');
+    [timelock1, timelock2] = combine_conds_for_T_test('eeglab', 'main_12vs34', data.cuechstay, data.cuechswitch, data.cueenstay, data.cueenswitch);
+    [cue_lang] = myWrapper_ept_TFCE(timelock1, timelock2, start_sample, end_sample);
+    fprintf('\nTARGET window -> Main effect of lang:\n');
+    [timelock1, timelock2] = combine_conds_for_T_test('eeglab', 'main_12vs34', data.targetchstay, data.targetchswitch, data.targetenstay, data.targetenswitch); %'2-1 vs 4-3');
+    [target_lang] = myWrapper_ept_TFCE(timelock1, timelock2, start_sample, end_sample);
+
+    % Main effect of switch (collapse across langs)
+    fprintf('\nCUE window -> Main effect of ttype:\n');
+    [timelock1, timelock2] = combine_conds_for_T_test('eeglab', 'main_13vs24', data.cuechstay, data.cuechswitch, data.cueenstay, data.cueenswitch);
+    [cue_ttype] = myWrapper_ept_TFCE(timelock1, timelock2, start_sample, end_sample);
+    fprintf('\nTARGET window -> Main effect of ttype:\n');
+    [timelock1, timelock2] = combine_conds_for_T_test('eeglab', 'main_13vs24', data.targetchstay, data.targetchswitch, data.targetenstay, data.targetenswitch); %'2-1 vs 4-3');
+    [target_ttype] = myWrapper_ept_TFCE(timelock1, timelock2, start_sample, end_sample);
+
+    save([ResultsFolder 'stats_TFCE.mat'], 'cue_interaction', 'cue_lang', 'cue_ttype', 'target_interaction', 'target_lang', 'target_ttype');
+
+    
+    %% Find the effects & plot them
+
+    % Automatically check all the stats output & read out the time interval
+    % of each effect (from the stat.P_Values field)
+
+    stats = load([ResultsFolder 'stats_TFCE.mat']);
+    temp = load([ResultsFolder 'time_field.mat']); time_field = temp.time_field; % used for reading out the time interval of effect
+    temp = load([ResultsFolder 'GA_erf_allConditions.mat']); GA = temp.GA_erf; % if you don't have this file, run stats_ROI.m to obtain it
+    fprintf('\nThe following effects were detected:\n');
+
+    % loop thru all 6 stats output (cue/target lang/ttype/interxn) and loop thru all ROIs in each,
+    % check if any p-values in the results are significant (these are the effects)
+    stats_names = fieldnames(stats);
+    ROI_name = ''; % for compatibility with stats_ROI_TFCE.m
+    for i = 1:length(stats_names) % each cycle handles one effect (e.g. cue_lang)
+        stat_name = stats_names{i};
+
+            pvalues = stats.(stat_name).P_Values; % get the p-values
+            pvalues = pvalues(1,:); % look at the 1st channel only, since the 2nd channel is a "fake" one we created (identical to 1st channel)
+            
+            % if any p-value is sig, that's an effect
+            effect = find(pvalues < 0.05);
+            % if there is an effect, we print it out
+            if ~isempty(effect) 
+                time_points = sprintf(' %d', effect);
+                start_time = time_field(effect(1));
+                end_time = time_field(effect(end)); %NOTE: we are assuming the effect is continuous here (which is prob true in most cases). But really should check this!! (which is why we output the samples / time points below)
+                fprintf('%s has an effect in %s, between %.f~%.f ms (significant at samples:%s). p = %f\n', ROI_name, stat_name, start_time*1000, end_time*1000, time_points, min(pvalues(effect))); % convert units to ms
+
+                % plot the effect period, overlaid onto the GA plot for this ROI
+                if strcmp(stat_name(1:3), 'cue') % this effect occurs in cue window
+                    figure('Name', [stat_name ' in ' ROI_name]); hold on
+                    for j = conds_cue
+                        plot(GA.(eventnames_8{j}).time, GA.(eventnames_8{j}).avg);
+                        xlim([-0.2 0.75]); 
+                    end
+                    line([start_time start_time], ylim, 'Color','black'); % plot a vertical line at start_time
+                    line([end_time end_time], ylim, 'Color','black'); % plot a vertical line at end_time
+                    % make a colour patch for the time interval of the effect
+                    % (this keeps occupying the front layer, blocking the GA plot)
+                    %x = [start_time end_time end_time start_time]; % shade between 2 values on x-axis
+                    %y = [min(ylim)*[1 1] max(ylim)*[1 1]]; % fill up throughout y-axis
+                    %patch(x,y,'white'); % choose colour
+                    legend(eventnames_8(conds_cue));
+                elseif strcmp(stat_name(1:6), 'target') % this effect occurs in target window
+                    figure('Name', [stat_name ' in ' ROI_name]); hold on
+                    for j = conds_target
+                        plot(GA.(eventnames_8{j}).time, GA.(eventnames_8{j}).avg);
+                        xlim([-0.2 0.75]); 
+                    end
+                    line([start_time start_time], ylim, 'Color','black'); % plot a vertical line at start_time
+                    line([end_time end_time], ylim, 'Color','black'); % plot a vertical line at end_time
+                    legend(eventnames_8(conds_target));                
+                else % should never be here
+                    fprintf('Error: an effect is found, but its not in either cue nor target window.\n');
+                end
+            else % output a msg even if there's no effect, just so we know the script ran correctly
+                %fprintf('%s: No effect in %s\n', stat_name, ROI_name);
+            end
+
+    end
+
+    %%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % SUBFUNCTIONS
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+    % wrapper function for calling ept_TFCE(), so that settings only need to be changed in one place
+    function Results = myWrapper_ept_TFCE(data1, data2, start_sample, end_sample)
+
+        % crop the data according to the selected time interval       
+        data1 = data1(:,:,start_sample:end_sample);
+        data2 = data2(:,:,start_sample:end_sample);
+        
+        % the input format to TFCE requires a "channel" dimension, so we check this
+        % https://github.com/Mensen/ept_TFCE-matlab/issues/21
+        if (size(data1, 2) == 1) % if there is only 1 channel (e.g. ROI result),
+                                 % we fake a 2nd channel by making a copy of the 1st channel
+            data1 = repmat(data1, [1,2,1]);
+            data2 = repmat(data2, [1,2,1]);
+            
+            % we also need to treat this data as time-frequency data (so that TFCE won't look for a channel locations file)
+            flag_ft = true;
+            chanlocs = [];
+            
+        else % for normal (multi channel) data
+            flag_ft = false;
+            
+            % read the channel locations
+            addpath(genpath('C:\Users\43606024\Documents\MATLAB\eeglab14_1_1b\'));
+            chanlocs = readlocs('chanlocs_TFCE.txt', 'filetype','custom', 'format',{'X','Y','Z'});
+        end       
+        
+        Results = ept_TFCE(data1, data2, ...
+            chanlocs, ...
+            'type', 'd', ...
+            'flag_ft', flag_ft, ...
+            'flag_tfce', true, ...
+            'nPerm', 2000, ...
+            'rSample', 200, ...
+            'flag_save', false);
+            %'saveName', [ResultsFolder_ROI 'TFCE_temp\\ept_' ROI_name '.mat']); % set a location to temporarily store the output. we don't need to save it, but if you don't set a location, it will litter arond your current directory
     end
 end
-
-
-%% Statistical analysis using TFCE method
-
-Just copy from stats_ROI_TFCE.m (after modifying it there)
-
-- use 'lay' file as channel location. Might be able to just read it in using readlocs() from eeglab. 
-If not, have a look at the output of readlocs() & put ur layout file into that structure.
-
-
 
 %{
 %% Descriptives

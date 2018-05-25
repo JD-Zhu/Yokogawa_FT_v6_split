@@ -47,7 +47,7 @@ function stats_ROI_TFCE()
         ROI_name = ROIs_label{k};
 
         for j = 1:length(eventnames_8) % loop thru each condition, convert it to eeglab format
-            allSubjects_ROIs_eeglab.(ROI_name).(eventnames_8{j}) = convert_FT_to_eeglab(allSubjects_ROIs.(ROI_name).(eventnames_8{j}); 
+            allSubjects_ROIs_eeglab.(ROI_name).(eventnames_8{j}) = convert_FT_to_eeglab(allSubjects_ROIs.(ROI_name).(eventnames_8{j})); 
             %allSubjects_ROIs_eeglab.(ROI_name).(eventnames_8{j}).label = ROI_name;
             %allSubjects_ROIs_eeglab.(ROI_name).(eventnames_8{j}).dimord = 'subj_chan_time';
         end
@@ -199,24 +199,18 @@ function stats_ROI_TFCE()
             
             % we also need to treat this data as time-frequency data (so that TFCE won't look for a channel locations file)
             flag_ft = true;
-            locs.e_loc = [];
+            chanlocs = [];
             
         else % for normal (multi channel) data
             flag_ft = false;
             
-            % read channel layout file to generate the locs.e_loc variable
+            % read the channel locations
             addpath(genpath('C:\Users\43606024\Documents\MATLAB\eeglab14_1_1b\'));
-            chanlocs4 = readlocs('C:\\Users\\43606024\\Documents\\MATLAB\\spm12\\EEGtemplates\\biosemi64.sfp');
-            chanlocs4 = chanlocs4(4:end);
-            
-            %TODO: get chan loc file working:
-            %chanlocs4 = readlocs('D:\Judy\Exp1\6_MEG-data\results_ERF\lay.mat');
-            chanlocs = readlocs('D:\Judy\Exp1\6_MEG-data\RAW_DATA\M03-AG-2784\2784_AG_ME155_2017_11_17.elp');
-            % nope - these are the marker coils locations
+            chanlocs = readlocs('chanlocs_TFCE.txt', 'filetype','custom', 'format',{'X','Y','Z'});
         end       
         
         Results = ept_TFCE(data1, data2, ...
-            locs.e_loc, ...
+            chanlocs, ...
             'type', 'd', ...
             'flag_ft', flag_ft, ...
             'flag_tfce', true, ...

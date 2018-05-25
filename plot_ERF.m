@@ -1,10 +1,15 @@
-% Plots ERF. Generates and plots GFP.
+% Plots ERF. 
+% Generates and plots GFP.
 
 % can use this to regen all plots from saved erf results:
 %load([ResultsFolder SubjectID '_erf.mat']); % select which subject to load
+%load([ResultsFolder 'lay.mat']); 
 
+% if you want to compare before & after artefact removal (erf vs. erf_clean),
+% set plot_uncleaned to 'true' & supply the 'erf' input arg.
+% if only plotting cleaned erf & GFP, can specify the 'erf' arg as []
 
-function plot_ERF (erf, erf_clean, lay)
+function plot_ERF (erf, erf_clean, lay, plot_uncleaned)
 
     % run the #define section
     global conds_cue; global conds_target; global eventnames;
@@ -21,12 +26,13 @@ function plot_ERF (erf, erf_clean, lay)
 
     % all pairwise comparisons btwn raw data (erf) & after artefact removal (erf_clean)
     % just to see how good the artefact removal is (atm we reject components 1:5, we can adjust this for more/less removal)
-    %{
-    for j = 1:length(eventcodes)
-        figure;
-        ft_multiplotER(cfg, erf.(eventnames{j}), erf_clean.(eventnames{j}));
+    if (plot_uncleaned)
+        for j = 1:length(eventcodes)
+            figure;
+            ft_multiplotER(cfg, erf.(eventnames{j}), erf_clean.(eventnames{j}));
+        end
     end
-    %}
+
 
     % to compare the 4 conds
     % (requires the list of 'cfg' assignments above, if running in console)
