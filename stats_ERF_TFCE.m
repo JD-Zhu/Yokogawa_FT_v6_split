@@ -45,48 +45,80 @@ function stats_ERF_TFCE()
     for j = 1:length(eventnames_8) % loop thru each condition, convert it to eeglab format
         allSubjects_erf_eeglab.(eventnames_8{j}) = convert_FT_to_eeglab(allSubjects_erf.(eventnames_8{j})); 
     end
-
+    
+    
+    %% select the time interval for analysis (e.g. 0~750ms),
+    % by cropping this portion from the original timecourse (-1~1s).
+    time_field = allSubjects_ROIs.RIFG.cuechstay{1,1}.time; % get the original timecourse from any condition
+    start_sample = find(time_field<0.0001, 1, 'last'); % find the index of the sample at 0ms (don't use the exact number '0', coz the actual time recorded is sth like -5.4845e-14 second
+    end_sample = find(time_field>0.7499, 1, 'first'); % find the index of the sample at 750ms
+    
+    % crop the time_field
+    time_field = time_field(start_sample:end_sample);
+    
+    % crop the data accordingly    
+    data = allSubjects_erf_eeglab;
+    for j = 1:length(eventnames_8)
+        data.(eventnames{j}) = data.(eventnames{j})(:,:,start_sample:end_sample);
+    end
+    
     
     %% Statistical analysis using TFCE method
 
     fprintf('\n= STATS: Threshold-free cluster enhancement (TFCE method) =\n');
 
-    % load start_sample & end_sample, for use in myWrapper_ept_TFCE()
-    % used for cropping data to match the selected time interval for analysis
-    temp = load([ResultsFolder 'time_field.mat']);
-    start_sample = temp.start_sample;
-    end_sample = temp.end_sample;
-  
-    data = allSubjects_erf_eeglab;
-        
-    % run TFCE
+    % read the channel locations
+    addpath(genpath('C:\Users\Judy\Documents\MATLAB\eeglab14_1_1b\'));
+    chanlocs = readlocs([ResultsFolder 'chanlocs_XYZ.txt'], 'filetype','custom', 'format',{'X','Y','Z'});
+    
+    %% use the built-in ANOVA function
+    % put data into 2x2 cell array for ANOVA
+    cue = {data.cuechstay, data.cuechswitch; data.cueenstay, data.cueenswitch};
+    ept_TFCE_ANOVA(cue, chanlocs);    
+    target = {data.targetchstay, data.targetchswitch; data.targetenstay, data.targetenswitch};
+    ept_TFCE_ANOVA(target, chanlocs);
+    
+    % show the results
+    load('ept_Results_target-ANOVA.mat');
+    [cluster_results] = ept_calculateClusters(Results, Info.Electrodes.ChannelNeighbours, 0.05);
+    ept_ResultViewer(); % GUI for visualisation (you need to load the Results file using the GUI)
+            
+    %% run the 3 separate tests (old)
 
     % Interaction (i.e. calc sw$ in each lang, then submit the 2 sw$ for comparison)
     fprintf('\nCUE window -> Testing lang x ttype interaction:\n');
     [timelock1, timelock2] = combine_conds_for_T_test('eeglab', 'interaction', data.cuechstay, data.cuechswitch, data.cueenstay, data.cueenswitch);
-    [cue_interaction] = myWrapper_ept_TFCE(timelock1, timelock2, start_sample, end_sample);
+    [cue_interaction] = myWrapper_ept_TFCE(timelock1, timelock2, chanlocs);
     fprintf('\nTARGET window -> Testing lang x ttype interaction:\n');
     [timelock1, timelock2] = combine_conds_for_T_test('eeglab', 'interaction', data.targetchstay, data.targetchswitch, data.targetenstay, data.targetenswitch); %'2-1 vs 4-3');
-    [target_interaction] = myWrapper_ept_TFCE(timelock1, timelock2, start_sample, end_sample);
+    [target_interaction] = myWrapper_ept_TFCE(timelock1, timelock2, chanlocs);
 
     % Main effect of lang (collapse across stay-switch)
     fprintf('\nCUE window -> Main effect of lang:\n');
     [timelock1, timelock2] = combine_conds_for_T_test('eeglab', 'main_12vs34', data.cuechstay, data.cuechswitch, data.cueenstay, data.cueenswitch);
-    [cue_lang] = myWrapper_ept_TFCE(timelock1, timelock2, start_sample, end_sample);
+    [cue_lang] = myWrapper_ept_TFCE(timelock1, timelock2, chanlocs);
     fprintf('\nTARGET window -> Main effect of lang:\n');
     [timelock1, timelock2] = combine_conds_for_T_test('eeglab', 'main_12vs34', data.targetchstay, data.targetchswitch, data.targetenstay, data.targetenswitch); %'2-1 vs 4-3');
-    [target_lang] = myWrapper_ept_TFCE(timelock1, timelock2, start_sample, end_sample);
+    [target_lang] = myWrapper_ept_TFCE(timelock1, timelock2, chanlocs);
 
     % Main effect of switch (collapse across langs)
     fprintf('\nCUE window -> Main effect of ttype:\n');
     [timelock1, timelock2] = combine_conds_for_T_test('eeglab', 'main_13vs24', data.cuechstay, data.cuechswitch, data.cueenstay, data.cueenswitch);
-    [cue_ttype] = myWrapper_ept_TFCE(timelock1, timelock2, start_sample, end_sample);
+    [cue_ttype] = myWrapper_ept_TFCE(timelock1, timelock2, chanlocs);
     fprintf('\nTARGET window -> Main effect of ttype:\n');
     [timelock1, timelock2] = combine_conds_for_T_test('eeglab', 'main_13vs24', data.targetchstay, data.targetchswitch, data.targetenstay, data.targetenswitch); %'2-1 vs 4-3');
-    [target_ttype] = myWrapper_ept_TFCE(timelock1, timelock2, start_sample, end_sample);
+    [target_ttype] = myWrapper_ept_TFCE(timelock1, timelock2, chanlocs);
 
-    save([ResultsFolder 'stats_TFCE.mat'], 'cue_interaction', 'cue_lang', 'cue_ttype', 'target_interaction', 'target_lang', 'target_ttype');
-
+    save([ResultsFolder 'stats_TFCE.mat'], 'cue_interaction', 'cue_lang', 'cue_ttype', ...
+                                           'target_interaction', 'target_lang', 'target_ttype', ...
+                                           'time_field');
+        
+    % show the clusters                                   
+    load([ResultsFolder 'channel_neighbours.mat']);
+    stat = cue_ttype;
+    %stat = target_lang;
+    [cluster_results] = ept_calculateClusters(stat, channel_neighbours, 0.05);
+    
     
     %% Find the effects & plot them
 
@@ -94,8 +126,10 @@ function stats_ERF_TFCE()
     % of each effect (from the stat.P_Values field)
 
     stats = load([ResultsFolder 'stats_TFCE.mat']);
-    temp = load([ResultsFolder 'time_field.mat']); time_field = temp.time_field; % used for reading out the time interval of effect
+    time_field = stats.time_field; % used for reading out the actual timings
+    stats = rmfield(stats, 'time_field'); % remove this field now
     temp = load([ResultsFolder 'GA_erf_allConditions.mat']); GA = temp.GA_erf; % if you don't have this file, run stats_ROI.m to obtain it
+    
     fprintf('\nThe following effects were detected:\n');
 
     % loop thru all 6 stats output (cue/target lang/ttype/interxn) and loop thru all ROIs in each,
@@ -156,11 +190,7 @@ function stats_ERF_TFCE()
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     % wrapper function for calling ept_TFCE(), so that settings only need to be changed in one place
-    function Results = myWrapper_ept_TFCE(data1, data2, start_sample, end_sample)
-
-        % crop the data according to the selected time interval       
-        data1 = data1(:,:,start_sample:end_sample);
-        data2 = data2(:,:,start_sample:end_sample);
+    function Results = myWrapper_ept_TFCE(data1, data2, chanlocs)
         
         % the input format to TFCE requires a "channel" dimension, so we check this
         % https://github.com/Mensen/ept_TFCE-matlab/issues/21
@@ -175,10 +205,6 @@ function stats_ERF_TFCE()
             
         else % for normal (multi channel) data
             flag_ft = false;
-            
-            % read the channel locations
-            addpath(genpath('C:\Users\43606024\Documents\MATLAB\eeglab14_1_1b\'));
-            chanlocs = readlocs('chanlocs_TFCE.txt', 'filetype','custom', 'format',{'X','Y','Z'});
         end       
         
         Results = ept_TFCE(data1, data2, ...
@@ -189,7 +215,7 @@ function stats_ERF_TFCE()
             'nPerm', 2000, ...
             'rSample', 200, ...
             'flag_save', false);
-            %'saveName', [ResultsFolder_ROI 'TFCE_temp\\ept_' ROI_name '.mat']); % set a location to temporarily store the output. we don't need to save it, but if you don't set a location, it will litter arond your current directory
+            %'saveName', [ResultsFolder 'TFCE_temp\\ept_' ROI_name '.mat']); % set a location to temporarily store the output. we don't need to save it, but if you don't set a location, it will litter arond your current directory
     end
 end
 

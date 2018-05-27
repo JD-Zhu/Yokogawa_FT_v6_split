@@ -53,29 +53,34 @@ function stats_ROI_TFCE()
         end
     end
 
-    % select the time interval for analysis (e.g. 0~750ms),
+    %% select the time interval for analysis (e.g. 0~750ms),
     % by cropping this portion from the original timecourse (-1~1s).
-    % If you want to select a diff time interval, you need to run this code again:
-    %{
-    % get the original timecourse from any condition
-    time_field = allSubjects_ROIs.RIFG.cuechstay{1,1}.time; 
+    time_field = allSubjects_ROIs.RIFG.cuechstay{1,1}.time; % get the original timecourse from any condition
     start_sample = find(time_field<0.0001, 1, 'last'); % find the index of the sample at 0ms (don't use the exact number '0', coz the actual time recorded is sth like -5.4845e-14 second
     end_sample = find(time_field>0.7499, 1, 'first'); % find the index of the sample at 750ms
-    time_field = time_field(start_sample:end_sample); % crop the time_field
-    save([ResultsFolder_ROI 'time_field.mat'], 'time_field', 'start_sample', 'end_sample');
-    %}
+
+    % crop the time_field
+    time_field = time_field(start_sample:end_sample);
+    % If you change the time interval above, should save a new copy:
+    %save([ResultsFolder_ROI 'time_field.mat'], 'time_field');
+
+    % crop the data accordingly 
+    for k = 1:length(ROIs_label)
+        ROI_name = ROIs_label{k};
+        for j = 1:length(eventnames_8)
+            allSubjects_ROIs_eeglab.(ROI_name).(eventnames{j}) = allSubjects_ROIs_eeglab.(ROI_name).(eventnames{j})(:,:,start_sample:end_sample);
+        end
+    end
     
     
     %% Statistical analysis using TFCE method
 
     fprintf('\n= STATS: Threshold-free cluster enhancement (TFCE method) =\n');
 
-    % load start_sample & end_sample, for use in myWrapper_ept_TFCE()
-    % used for cropping data to match the selected time interval for analysis
-    temp = load([ResultsFolder_ROI 'time_field.mat']);
-    start_sample = temp.start_sample;
-    end_sample = temp.end_sample;
-  
+    % read the channel locations
+    addpath(genpath('C:\Users\Judy\Documents\MATLAB\eeglab14_1_1b\'));
+    chanlocs = readlocs([ResultsFolder 'chanlocs_XYZ.txt'], 'filetype','custom', 'format',{'X','Y','Z'});
+      
     % each cycle processes one ROI
     for k = 1:length(ROIs_label)
 
@@ -89,26 +94,26 @@ function stats_ROI_TFCE()
         % Interaction (i.e. calc sw$ in each lang, then submit the 2 sw$ for comparison)
         fprintf('\nCUE window -> Testing lang x ttype interaction:\n');
         [timelock1, timelock2] = combine_conds_for_T_test('eeglab', 'interaction', data.cuechstay, data.cuechswitch, data.cueenstay, data.cueenswitch);
-        [cue_interaction.(ROI_name)] = myWrapper_ept_TFCE(timelock1, timelock2, start_sample, end_sample);
+        [cue_interaction.(ROI_name)] = myWrapper_ept_TFCE(timelock1, timelock2, chanlocs);
         fprintf('\nTARGET window -> Testing lang x ttype interaction:\n');
         [timelock1, timelock2] = combine_conds_for_T_test('eeglab', 'interaction', data.targetchstay, data.targetchswitch, data.targetenstay, data.targetenswitch); %'2-1 vs 4-3');
-        [target_interaction.(ROI_name)] = myWrapper_ept_TFCE(timelock1, timelock2, start_sample, end_sample);
+        [target_interaction.(ROI_name)] = myWrapper_ept_TFCE(timelock1, timelock2, chanlocs);
     
         % Main effect of lang (collapse across stay-switch)
         fprintf('\nCUE window -> Main effect of lang:\n');
         [timelock1, timelock2] = combine_conds_for_T_test('eeglab', 'main_12vs34', data.cuechstay, data.cuechswitch, data.cueenstay, data.cueenswitch);
-        [cue_lang.(ROI_name)] = myWrapper_ept_TFCE(timelock1, timelock2, start_sample, end_sample);
+        [cue_lang.(ROI_name)] = myWrapper_ept_TFCE(timelock1, timelock2, chanlocs);
         fprintf('\nTARGET window -> Main effect of lang:\n');
         [timelock1, timelock2] = combine_conds_for_T_test('eeglab', 'main_12vs34', data.targetchstay, data.targetchswitch, data.targetenstay, data.targetenswitch); %'2-1 vs 4-3');
-        [target_lang.(ROI_name)] = myWrapper_ept_TFCE(timelock1, timelock2, start_sample, end_sample);
+        [target_lang.(ROI_name)] = myWrapper_ept_TFCE(timelock1, timelock2, chanlocs);
 
         % Main effect of switch (collapse across langs)
         fprintf('\nCUE window -> Main effect of ttype:\n');
         [timelock1, timelock2] = combine_conds_for_T_test('eeglab', 'main_13vs24', data.cuechstay, data.cuechswitch, data.cueenstay, data.cueenswitch);
-        [cue_ttype.(ROI_name)] = myWrapper_ept_TFCE(timelock1, timelock2, start_sample, end_sample);
+        [cue_ttype.(ROI_name)] = myWrapper_ept_TFCE(timelock1, timelock2, chanlocs);
         fprintf('\nTARGET window -> Main effect of ttype:\n');
         [timelock1, timelock2] = combine_conds_for_T_test('eeglab', 'main_13vs24', data.targetchstay, data.targetchswitch, data.targetenstay, data.targetenswitch); %'2-1 vs 4-3');
-        [target_ttype.(ROI_name)] = myWrapper_ept_TFCE(timelock1, timelock2, start_sample, end_sample);
+        [target_ttype.(ROI_name)] = myWrapper_ept_TFCE(timelock1, timelock2, chanlocs);
 
     end
     
@@ -184,11 +189,7 @@ function stats_ROI_TFCE()
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     % wrapper function for calling ept_TFCE(), so that settings only need to be changed in one place
-    function Results = myWrapper_ept_TFCE(data1, data2, start_sample, end_sample)
-
-        % crop the data according to the selected time interval       
-        data1 = data1(:,:,start_sample:end_sample);
-        data2 = data2(:,:,start_sample:end_sample);
+    function Results = myWrapper_ept_TFCE(data1, data2, chanlocs)
         
         % the input format to TFCE requires a "channel" dimension, so we check this
         % https://github.com/Mensen/ept_TFCE-matlab/issues/21
@@ -203,10 +204,6 @@ function stats_ROI_TFCE()
             
         else % for normal (multi channel) data
             flag_ft = false;
-            
-            % read the channel locations
-            addpath(genpath('C:\Users\43606024\Documents\MATLAB\eeglab14_1_1b\'));
-            chanlocs = readlocs('chanlocs_TFCE.txt', 'filetype','custom', 'format',{'X','Y','Z'});
         end       
         
         Results = ept_TFCE(data1, data2, ...
@@ -217,7 +214,7 @@ function stats_ROI_TFCE()
             'nPerm', 2000, ...
             'rSample', 200, ...
             'flag_save', false);
-            %'saveName', [ResultsFolder_ROI 'TFCE_temp\\ept_' ROI_name '.mat']); % set a location to temporarily store the output. we don't need to save it, but if you don't set a location, it will litter arond your current directory
+            %'saveName', [ResultsFolder 'TFCE_temp\\ept_' ROI_name '.mat']); % set a location to temporarily store the output. we don't need to save it, but if you don't set a location, it will litter arond your current directory
     end
 
 end
