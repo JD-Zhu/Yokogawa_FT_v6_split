@@ -77,10 +77,11 @@ function stats_ROI_TFCE()
 
     fprintf('\n= STATS: Threshold-free cluster enhancement (TFCE method) =\n');
 
-    % read the channel locations
-    addpath(genpath('C:\Users\Judy\Documents\MATLAB\eeglab14_1_1b\'));
-    chanlocs = readlocs([ResultsFolder 'chanlocs_XYZ.txt'], 'filetype','custom', 'format',{'X','Y','Z'});
-      
+    % create dummy channel locations variable (not used for ROI data, just to remain compatible with
+    % stats_ERF_TFCE.m, so they can share the same myWrapper_ept_TFCE function)
+    chanlocs = [];
+
+    
     % each cycle processes one ROI
     for k = 1:length(ROIs_label)
 

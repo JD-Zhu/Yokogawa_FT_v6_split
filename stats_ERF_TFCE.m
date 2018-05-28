@@ -49,7 +49,7 @@ function stats_ERF_TFCE()
     
     %% select the time interval for analysis (e.g. 0~750ms),
     % by cropping this portion from the original timecourse (-1~1s).
-    time_field = allSubjects_ROIs.RIFG.cuechstay{1,1}.time; % get the original timecourse from any condition
+    time_field = allSubjects_erf.cuechstay{1,1}.time; % get the original timecourse from any condition
     start_sample = find(time_field<0.0001, 1, 'last'); % find the index of the sample at 0ms (don't use the exact number '0', coz the actual time recorded is sth like -5.4845e-14 second
     end_sample = find(time_field>0.7499, 1, 'first'); % find the index of the sample at 750ms
     
@@ -68,8 +68,9 @@ function stats_ERF_TFCE()
     fprintf('\n= STATS: Threshold-free cluster enhancement (TFCE method) =\n');
 
     % read the channel locations
-    addpath(genpath('C:\Users\Judy\Documents\MATLAB\eeglab14_1_1b\'));
-    chanlocs = readlocs([ResultsFolder 'chanlocs_XYZ.txt'], 'filetype','custom', 'format',{'X','Y','Z'});
+    %addpath(genpath('C:\Users\43606024\Documents\MATLAB\eeglab14_1_1b\'));
+    %chanlocs = readlocs([ResultsFolder 'chanlocs_XYZ.txt'], 'filetype','custom', 'format',{'X','Y','Z'});
+    load([ResultsFolder 'chanlocs.mat']);
     
     %% use the built-in ANOVA function
     % put data into 2x2 cell array for ANOVA
@@ -80,9 +81,16 @@ function stats_ERF_TFCE()
     
     % show the results
     load('ept_Results_target-ANOVA.mat');
-    [cluster_results] = ept_calculateClusters(Results, Info.Electrodes.ChannelNeighbours, 0.05);
     ept_ResultViewer(); % GUI for visualisation (you need to load the Results file using the GUI)
-            
+
+    % to calc the cluster locations, we need to tweak the ANOVA output structure into one that contains a single effect
+    factor = A; % select which main effect / interaction you want: A, B, AB
+    Results_single.P_Values = Results.P_Values.(factor);
+    Results_single.Obs = Results.Obs.(factor);
+    Results_single.TFCE_Obs = Results.TFCE_Obs.(factor);
+    Results_single.maxTFCE = Results.maxTFCE.(factor);
+    [cluster_results] = ept_calculateClusters(Results_single, Info.Electrodes.ChannelNeighbours, 0.05);
+
     %% run the 3 separate tests (old)
 
     % Interaction (i.e. calc sw$ in each lang, then submit the 2 sw$ for comparison)
@@ -113,11 +121,11 @@ function stats_ERF_TFCE()
                                            'target_interaction', 'target_lang', 'target_ttype', ...
                                            'time_field');
         
-    % show the clusters                                   
+    % calc the cluster locations (which channels & which time points)
     load([ResultsFolder 'channel_neighbours.mat']);
-    stat = cue_ttype;
-    %stat = target_lang;
-    [cluster_results] = ept_calculateClusters(stat, channel_neighbours, 0.05);
+    threshold = 0.05;
+    %[clusters_cue_ttype] = ept_calculateClusters(cue_ttype, channel_neighbours, threshold);
+    %[clusters_target_lang] = ept_calculateClusters(target_lang, channel_neighbours, threshold);
     
     
     %% Find the effects & plot them
@@ -126,19 +134,33 @@ function stats_ERF_TFCE()
     % of each effect (from the stat.P_Values field)
 
     stats = load([ResultsFolder 'stats_TFCE.mat']);
-    time_field = stats.time_field; % used for reading out the actual timings
-    stats = rmfield(stats, 'time_field'); % remove this field now
-    temp = load([ResultsFolder 'GA_erf_allConditions.mat']); GA = temp.GA_erf; % if you don't have this file, run stats_ROI.m to obtain it
+    % get time_field: used for reading out the actual timings
+    if isfield(stats, 'time_field') % in new version, time_field is saved inside the stats output
+        time_field = stats.time_field;
+        stats = rmfield(stats, 'time_field'); % remove this field now
+    else % in old version, read the time_field saved in results folder
+        temp = load([ResultsFolder 'time_field.mat']); time_field = temp.time_field;
+    end
+    % load GA for plotting - if you don't have this file, run stats_ROI.m to obtain it
+    temp = load([ResultsFolder 'GA_erf_allConditions.mat']); GA = temp.GA_erf;
     
     fprintf('\nThe following effects were detected:\n');
 
-    % loop thru all 6 stats output (cue/target lang/ttype/interxn) and loop thru all ROIs in each,
+    % loop thru all 6 stats output (cue/target lang/ttype/interxn),
     % check if any p-values in the results are significant (these are the effects)
     stats_names = fieldnames(stats);
     ROI_name = ''; % for compatibility with stats_ROI_TFCE.m
     for i = 1:length(stats_names) % each cycle handles one effect (e.g. cue_lang)
         stat_name = stats_names{i};
-
+        
+        [cluster_results] = ept_calculateClusters(stats.(stat_name), channel_neighbours, threshold);
+        for index = 1:length(cluster_results)
+            [channels, samples] = find(cluster_results(index).cluster_locations); 
+            fprintf('%s: channels %s at samples %s\n', stat_name, sprintf(channels), sprintf(samples));
+            %TODO: also plot this - using ft_singleplot with selected channels (see stats_ERF.m bottom)
+        end
+        
+        
             pvalues = stats.(stat_name).P_Values; % get the p-values
             pvalues = pvalues(1,:); % look at the 1st channel only, since the 2nd channel is a "fake" one we created (identical to 1st channel)
             
