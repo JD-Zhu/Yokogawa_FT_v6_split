@@ -235,25 +235,61 @@ function source_v1
         source_cue_combined = ft_sourceanalysis(cfg, erf_cue_combined); % create spatial filter for cue window
         source_target_combined = ft_sourceanalysis(cfg, erf_target_combined); % create spatial filter for target window
 
-        % now use the common spatial filter to run source analysis for each cond
-        % Note: ft_sourceanalysis is only for illustration purpose (no time dimension, only creates a source image showing where in the 3d space is one cond different from another cond)
-        %{    
-        % 4 conds in cue window
-        cfg.grid.filter = source_cue_combined.avg.filter;
-        for j = conds_cue
-            source.(eventnames{j}) = ft_sourceanalysis(cfg, erf.(eventnames{j}));
-        end
+        
+        %% Step 5: Source localisation (of sensor-space effects)
+        % Note: ft_sourceanalysis is only for localisation (no time dimension, only creates a source image showing where in the 3d space is one cond different from another cond)
+        
+        % time window to avg over (determined from sensor-space analysis)
+        cue_ttype_window = [0.435 0.535];
+        target_lang_window = [0.255 0.305];
+        
+        
+        % Main effect of switch in cue window
+        cue_stay = erf.cuechstay;
+        cue_switch = erf.cuechswitch;
+        cue_stay.avg = (erf.cuechstay.avg + erf.cueenstay.avg) / 2;
+        cue_switch.avg = (erf.cuechswitch.avg + erf.cueenswitch.avg) / 2;
+        
+        cfg_select = []; % avgovertime in the time window of sensor effect
+        cfg_select.latency     = cue_ttype_window;
+        cfg_select.avgovertime = 'yes';
+        cfg_select.nanmean     = 'yes';
+        cue_stay = ft_selectdata(cfg_select, cue_stay);
+        cue_switch = ft_selectdata(cfg_select, cue_switch);
+        
+        cfg.grid.filter = source_cue_combined.avg.filter; % use the common spatial filter created above
+        source_cue_stay = ft_sourceanalysis(cfg, cue_stay);
+        source_cue_switch = ft_sourceanalysis(cfg, cue_switch);
 
-        % 4 conds in target window
-        cfg.grid.filter = source_target_combined.avg.filter; 
-        for j = conds_target
-            source.(eventnames{j}) = ft_sourceanalysis(cfg, erf.(eventnames{j}));
-        end
+        % Main effect of lang in target window
+        target_ch = erf.targetchstay;
+        target_en = erf.targetenstay;
+        target_ch.avg = (erf.targetchstay.avg + erf.targetchswitch.avg) / 2;
+        target_en.avg = (erf.targetenstay.avg + erf.targetenswitch.avg) / 2;
+        
+        cfg_select = []; % avgovertime in the time window of sensor effect
+        cfg_select.latency     = target_lang_window;
+        cfg_select.avgovertime = 'yes';
+        cfg_select.nanmean     = 'yes';
+        target_ch = ft_selectdata(cfg_select, target_ch);
+        target_en = ft_selectdata(cfg_select, target_en);
+        
+        cfg.grid.filter = source_target_combined.avg.filter; % use the common spatial filter created above
+        source_target_ch = ft_sourceanalysis(cfg, target_ch);
+        source_target_en = ft_sourceanalysis(cfg, target_en);
+        
+        
+%% TODO: Subtract the output from the 2 conditions to find the difference - this creates 
+% a blob showing where the effect occurs. Then use ft_sourceinterpoloate to warp it 
+% into common space & average the blob across subjects. Use SPM (or see link below) to read out
+% what brain regions the final averaged blob contains.
 
+% Mapping the blob onto an atlas:
+% http://www.fieldtriptoolbox.org/tutorial/aarhus/beamformingerf
 
-        %% Compute Percentage Power Change From Baseline
-        sourceDiff         = sourcepst;
-        sourceDiff.avg.pow = (sourcepst.avg.pow - sourcepre.avg.pow) ./ sourcepre.avg.pow;
+        % Compute Percentage Power Change From Baseline
+        sourceDiff         = source_target_en;
+        sourceDiff.avg.pow = (source_target_en.avg.pow - source_target_ch.avg.pow) ./ source_target_ch.avg.pow;
 
         %load template for display in MNI sapce and replace subject grid with MNI
         %grid
@@ -287,7 +323,7 @@ function source_v1
         ft_sourcewrite(cfg,source_int);
         %}
 
-        %% Step 5: ROI analysis
+        %% Step 6: ROI analysis (source reconstruction) (independent from sensor-level results)
         % Here we use the atlas to create VEs (virtual sensors) - 1 VE represents 1 ROI
 
         % Load Atlas (contains parcellation of brain into regions/tissues/parcels)

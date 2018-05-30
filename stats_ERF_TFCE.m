@@ -1,6 +1,19 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% stats_ERF_TFCE.m
+%
+% statistical analysis on ERF data using the TFCE method:
+% https://github.com/Mensen/ept_TFCE-matlab
+%
+%
+% HOW TO REPORT THE CLUSTERS:
+% "Analysis showed that Condition A had significantly higher amplitudes 
+% compared to Condition B for 56 unique channels in the frontal region 
+% for the time range from 280 - 320 ms (peak channel: Fz; T = 6.024, p = 0.002)."
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 function stats_ERF_TFCE()
-    close all;
-    clear all;
 
     % run the #define section
     global conds_cue; global conds_target; global eventnames;
@@ -39,8 +52,24 @@ function stats_ERF_TFCE()
             allSubjects_erf.(eventnames_8{j}) = [allSubjects_erf.(eventnames_8{j}) erf_clean.(eventnames_8{j})];
         end
     end
+    
+    % if haven't calculated GA before, do that now & save
+    if exist([ResultsFolder 'GA_erf_allConditions.mat'], 'file') ~= 2
+        % CALCULATE the grand average (across all subjects) for each condition
+        cfg = [];
+        cfg.channel   = {'all'};
+        cfg.latency   = 'all';
+        cfg.parameter = 'avg';
+        for j = 1:length(eventnames_8)
+            GA_erf.(eventnames_8{j}) = ft_timelockgrandaverage(cfg, allSubjects_erf.(eventnames_8{j}){:});  
+            % "{:}" means to use data from all elements of the variable
+        end
 
-    % reformat again into eeglab format (which TFCE accepts):
+        save([ResultsFolder 'GA_erf_allConditions.mat'], 'GA_erf');
+    end
+
+    
+    % reformat data into eeglab format (which TFCE accepts):
     % each condition contains a 3d ("subject x channel x time") matrix
     for j = 1:length(eventnames_8) % loop thru each condition, convert it to eeglab format
         allSubjects_erf_eeglab.(eventnames_8{j}) = convert_FT_to_eeglab(allSubjects_erf.(eventnames_8{j})); 
@@ -70,28 +99,10 @@ function stats_ERF_TFCE()
     % read the channel locations
     %addpath(genpath('C:\Users\43606024\Documents\MATLAB\eeglab14_1_1b\'));
     %chanlocs = readlocs([ResultsFolder 'chanlocs_XYZ.txt'], 'filetype','custom', 'format',{'X','Y','Z'});
-    load([ResultsFolder 'chanlocs.mat']);
+    chanlocs = []; load([ResultsFolder 'chanlocs.mat']);
     
-    %% use the built-in ANOVA function
-    % put data into 2x2 cell array for ANOVA
-    cue = {data.cuechstay, data.cuechswitch; data.cueenstay, data.cueenswitch};
-    ept_TFCE_ANOVA(cue, chanlocs);    
-    target = {data.targetchstay, data.targetchswitch; data.targetenstay, data.targetenswitch};
-    ept_TFCE_ANOVA(target, chanlocs);
-    
-    % show the results
-    load('ept_Results_target-ANOVA.mat');
-    ept_ResultViewer(); % GUI for visualisation (you need to load the Results file using the GUI)
 
-    % to calc the cluster locations, we need to tweak the ANOVA output structure into one that contains a single effect
-    factor = A; % select which main effect / interaction you want: A, B, AB
-    Results_single.P_Values = Results.P_Values.(factor);
-    Results_single.Obs = Results.Obs.(factor);
-    Results_single.TFCE_Obs = Results.TFCE_Obs.(factor);
-    Results_single.maxTFCE = Results.maxTFCE.(factor);
-    [cluster_results] = ept_calculateClusters(Results_single, Info.Electrodes.ChannelNeighbours, 0.05);
-
-    %% run the 3 separate tests (old)
+    % Run the statistical tests (interaction & 2 main effects)
 
     % Interaction (i.e. calc sw$ in each lang, then submit the 2 sw$ for comparison)
     fprintf('\nCUE window -> Testing lang x ttype interaction:\n');
@@ -120,19 +131,35 @@ function stats_ERF_TFCE()
     save([ResultsFolder 'stats_TFCE.mat'], 'cue_interaction', 'cue_lang', 'cue_ttype', ...
                                            'target_interaction', 'target_lang', 'target_ttype', ...
                                            'time_field');
-        
-    % calc the cluster locations (which channels & which time points)
-    load([ResultsFolder 'channel_neighbours.mat']);
-    threshold = 0.05;
-    %[clusters_cue_ttype] = ept_calculateClusters(cue_ttype, channel_neighbours, threshold);
-    %[clusters_target_lang] = ept_calculateClusters(target_lang, channel_neighbours, threshold);
+            
+    % Alternatively, use the built-in ANOVA function (seems to be not as sensitive)
+    %{
+    % put data into 2x2 cell array for ANOVA
+    cue = {data.cuechstay, data.cuechswitch; data.cueenstay, data.cueenswitch};
+    ept_TFCE_ANOVA(cue, chanlocs);    
+    target = {data.targetchstay, data.targetchswitch; data.targetenstay, data.targetenswitch};
+    ept_TFCE_ANOVA(target, chanlocs);
     
-    
+    % show the results
+    ept_ResultViewer(); % GUI for visualisation (you need to load the saved output file using the GUI)
+
+    % to calc the cluster locations, we need to tweak the ANOVA output structure into one that contains a single effect
+    factor = A; % select which main effect / interaction you want: A, B, AB
+    Results_single.P_Values = Results.P_Values.(factor);
+    Results_single.Obs = Results.Obs.(factor);
+    Results_single.TFCE_Obs = Results.TFCE_Obs.(factor);
+    Results_single.maxTFCE = Results.maxTFCE.(factor);
+    [cluster_results] = ept_calculateClusters(Results_single, Info.Electrodes.ChannelNeighbours, 0.05);
+    %}
+
+
     %% Find the effects & plot them
+    
+    % Can run this section alone to output a description & plot for each effect.
+    % Requires the following files to be placed in the ResultsFolder:
+    %   stats_TFCE.mat, GA_erf_allConditions.mat, channel_neighbours.mat, time_field.mat (if not contained in stats_TFCE.mat)
 
-    % Automatically check all the stats output & read out the time interval
-    % of each effect (from the stat.P_Values field)
-
+    % load the stats output
     stats = load([ResultsFolder 'stats_TFCE.mat']);
     % get time_field: used for reading out the actual timings
     if isfield(stats, 'time_field') % in new version, time_field is saved inside the stats output
@@ -141,68 +168,75 @@ function stats_ERF_TFCE()
     else % in old version, read the time_field saved in results folder
         temp = load([ResultsFolder 'time_field.mat']); time_field = temp.time_field;
     end
-    % load GA for plotting - if you don't have this file, run stats_ROI.m to obtain it
+    % load GA for plotting
     temp = load([ResultsFolder 'GA_erf_allConditions.mat']); GA = temp.GA_erf;
-    
+    % prepare for calling ept_calculateClusters
+    channel_neighbours = []; load([ResultsFolder 'channel_neighbours.mat']);
+    threshold = 0.05; % set your alpha here
+ 
     fprintf('\nThe following effects were detected:\n');
 
-    % loop thru all 6 stats output (cue/target lang/ttype/interxn),
-    % check if any p-values in the results are significant (these are the effects)
+    % Automatically go thru all 6 stats output (cue/target lang/ttype/interxn),
+    % check if any clusters were found for each effect
     stats_names = fieldnames(stats);
-    ROI_name = ''; % for compatibility with stats_ROI_TFCE.m
     for i = 1:length(stats_names) % each cycle handles one effect (e.g. cue_lang)
         stat_name = stats_names{i};
+        fprintf('\n[%s]: ', stat_name);
         
+        % produce info for each cluster (eg. which channels & time points formed each cluster)
         [cluster_results] = ept_calculateClusters(stats.(stat_name), channel_neighbours, threshold);
+        
+        % each cycle handles one cluster
         for index = 1:length(cluster_results)
+            % get the channels & time points which formed this cluster
             [channels, samples] = find(cluster_results(index).cluster_locations); 
-            fprintf('%s: channels %s at samples %s\n', stat_name, sprintf(channels), sprintf(samples));
-            %TODO: also plot this - using ft_singleplot with selected channels (see stats_ERF.m bottom)
-        end
-        
-        
-            pvalues = stats.(stat_name).P_Values; % get the p-values
-            pvalues = pvalues(1,:); % look at the 1st channel only, since the 2nd channel is a "fake" one we created (identical to 1st channel)
-            
-            % if any p-value is sig, that's an effect
-            effect = find(pvalues < 0.05);
-            % if there is an effect, we print it out
-            if ~isempty(effect) 
-                time_points = sprintf(' %d', effect);
-                start_time = time_field(effect(1));
-                end_time = time_field(effect(end)); %NOTE: we are assuming the effect is continuous here (which is prob true in most cases). But really should check this!! (which is why we output the samples / time points below)
-                fprintf('%s has an effect in %s, between %.f~%.f ms (significant at samples:%s). p = %f\n', ROI_name, stat_name, start_time*1000, end_time*1000, time_points, min(pvalues(effect))); % convert units to ms
+            channels = unique(channels); % remove the repeated entries
+            samples = unique(samples);
+            start_time = time_field(samples(1)); % read out the actual timing (in ms)
+            end_time = time_field(samples(end)); %NOTE: we are assuming the effect is continuous here (which is prob true in most cases). But really should check this!! (which is why we output the samples / time points below)
 
-                % plot the effect period, overlaid onto the GA plot for this ROI
-                if strcmp(stat_name(1:3), 'cue') % this effect occurs in cue window
-                    figure('Name', [stat_name ' in ' ROI_name]); hold on
-                    for j = conds_cue
-                        plot(GA.(eventnames_8{j}).time, GA.(eventnames_8{j}).avg);
-                        xlim([-0.2 0.75]); 
-                    end
-                    line([start_time start_time], ylim, 'Color','black'); % plot a vertical line at start_time
-                    line([end_time end_time], ylim, 'Color','black'); % plot a vertical line at end_time
-                    % make a colour patch for the time interval of the effect
-                    % (this keeps occupying the front layer, blocking the GA plot)
-                    %x = [start_time end_time end_time start_time]; % shade between 2 values on x-axis
-                    %y = [min(ylim)*[1 1] max(ylim)*[1 1]]; % fill up throughout y-axis
-                    %patch(x,y,'white'); % choose colour
-                    legend(eventnames_8(conds_cue));
-                elseif strcmp(stat_name(1:6), 'target') % this effect occurs in target window
-                    figure('Name', [stat_name ' in ' ROI_name]); hold on
-                    for j = conds_target
-                        plot(GA.(eventnames_8{j}).time, GA.(eventnames_8{j}).avg);
-                        xlim([-0.2 0.75]); 
-                    end
-                    line([start_time start_time], ylim, 'Color','black'); % plot a vertical line at start_time
-                    line([end_time end_time], ylim, 'Color','black'); % plot a vertical line at end_time
-                    legend(eventnames_8(conds_target));                
-                else % should never be here
-                    fprintf('Error: an effect is found, but its not in either cue nor target window.\n');
-                end
-            else % output a msg even if there's no effect, just so we know the script ran correctly
-                %fprintf('%s: No effect in %s\n', stat_name, ROI_name);
+            % output a description of this effect to console
+            fprintf('\n  Cluster %d: channels%s at samples%s (%.f~%.f ms). Peak channel %d, peak sample %d, T = %f, p = %f\n', ...
+                index, sprintf(' %d', channels), sprintf(' %d', samples), start_time*1000, end_time*1000, ...
+                cluster_results(index).channel_peak, cluster_results(index).sample_peak, cluster_results(index).max_t_value, cluster_results(index).p_value_peak);
+
+            % plot this cluster, overlaid onto GA
+            figure('Name', sprintf('%s: cluster %d', stat_name, index)); hold on;
+            
+            cfg        = [];
+            cfg.channel = channels;
+            if strcmp(stat_name(1:3), 'cue') % this effect occurs in cue window
+                %ft_singleplotER(cfg, GA.cuechstay, GA.cuechswitch, GA.cueenstay, GA.cueenswitch);
+                %legend(eventnames_8(conds_cue));
+                
+                % combine conditions to show main effect
+                stay = GA.cuechstay;
+                sw = GA.cuechswitch;
+                stay.avg = (GA.cuechstay.avg + GA.cueenstay.avg) / 2; % average across stay & switch
+                sw.avg = (GA.cuechswitch.avg + GA.cueenswitch.avg) / 2; % average across stay & switch
+                ft_singleplotER(cfg, stay, sw);
+                legend({'stay', 'switch'});    
+                xlim([-0.2 0.75]);
+            elseif strcmp(stat_name(1:6), 'target') % this effect occurs in target window
+                %ft_singleplotER(cfg, GA.targetchstay, GA.targetchswitch, GA.targetenstay, GA.targetenswitch);
+                %legend(eventnames_8(conds_target));                
+                
+                % combine conditions to show main effect
+                ch = GA.targetchstay;
+                en = GA.targetenstay;
+                ch.avg = (GA.targetchstay.avg + GA.targetchswitch.avg) / 2; % average across stay & switch
+                en.avg = (GA.targetenstay.avg + GA.targetenswitch.avg) / 2; % average across stay & switch
+                ft_singleplotER(cfg, ch, en);
+                legend({'ch', 'en'});                
+                xlim([-0.2 0.75]); 
+            else % should never be here
+                fprintf('Error: an effect is found, but its not in either cue nor target window.\n');
             end
+            
+            line([start_time start_time], ylim, 'Color','black'); % plot a vertical line at start_time
+            line([end_time end_time], ylim, 'Color','black'); % plot a vertical line at end_time
+            hold off;
+        end
 
     end
 
@@ -240,344 +274,3 @@ function stats_ERF_TFCE()
             %'saveName', [ResultsFolder 'TFCE_temp\\ept_' ROI_name '.mat']); % set a location to temporarily store the output. we don't need to save it, but if you don't set a location, it will litter arond your current directory
     end
 end
-
-%{
-%% Descriptives
-% http://www.fieldtriptoolbox.org/tutorial/cluster_permutation_timelock#within-subjects_experiments
-
-fprintf('\n= COMPUTING & PLOTTING CROSS-SUBJECT AVERAGES =\n');
-
-% CALCULATE the grand average (across all subjects) for each condition
-cfg = [];
-cfg.channel   = {'all', '-AG083', '-AG087', '-AG088', '-AG082', '-AG084', '-AG086'}; % remove sensors suffering from high-freq noise & trigger leaks
-cfg.latency   = 'all';
-cfg.parameter = 'avg';
-for j = 1:length(eventnames_8)
-    GA_erf.(eventnames_8{j}) = ft_timelockgrandaverage(cfg, allSubjects_erf.(eventnames_8{j}){:});  
-    % "{:}" means to use data from all elements of the variable
-end
-
-save([ResultsFolder 'GA_erf_allConditions.mat'], 'GA_erf');
-
-% multiplot
-%{
-load([ResultsFolder 'lay.mat']);
-        
-cfg              = [];
-cfg.showlabels   = 'yes';
-cfg.fontsize     = 6;
-cfg.layout       = lay;
-cfg.baseline     = [-0.2 0];
-cfg.baselinetype = 'absolute';
-
-% cue
-figure('Name','ft_multiplotER: GA_erf.cuechstay, GA_erf.cuechsw, GA_erf.cueenstay, GA_erf.cueensw');
-ft_multiplotER(cfg, GA_erf.cuechstay, GA_erf.cuechswitch, GA_erf.cueenstay, GA_erf.cueenswitch);
-legend(eventnames_8(conds_cue));
-
-% target
-figure('Name','ft_multiplotER: GA_erf.targetchstay, GA_erf.targetchsw, GA_erf.targetenstay, GA_erf.targetensw');
-ft_multiplotER(cfg, GA_erf.targetchstay, GA_erf.targetchswitch, GA_erf.targetenstay, GA_erf.targetenswitch);
-legend(eventnames_8(conds_target));
-%}
-
-
-% CALCULATE global averages across all sensors (i.e. GFP = global field power)
-cfg        = [];
-cfg.method = 'power';
-%cfg.channel = {'AG017', 'AG018', 'AG019', 'AG022', 'AG023', 'AG025', 'AG029', 'AG063', 'AG064', 'AG143'}; % 10 sig channels in cluster
-for j = 1:length(eventnames_8)
-    GA_erf_GFP.(eventnames_8{j}) = ft_globalmeanfield(cfg, GA_erf.(eventnames_8{j}));
-end
-
-% plot GFP for cue-locked 
-figure('Name','GFP_cue'); hold on
-for j = conds_cue
-    plot(GA_erf_GFP.(eventnames_8{j}).time, GA_erf_GFP.(eventnames_8{j}).avg);
-    xlim([-0.2 0.75]);
-end
-legend(eventnames_8(conds_cue));
-
-% plot GFP for target-locked 
-figure('Name','GFP_target'); hold on
-for j = conds_target
-    plot(GA_erf_GFP.(eventnames_8{j}).time, GA_erf_GFP.(eventnames_8{j}).avg);
-    xlim([-0.2 0.75]);
-end
-legend(eventnames_8(conds_target));
-
-
-% average across all 4 conds (for selecting windows for peaks)
-averageAcrossConds_cue = GA_erf_GFP.cuechstay;
-averageAcrossConds_cue.avg = (GA_erf_GFP.cuechstay.avg + GA_erf_GFP.cuechswitch.avg + GA_erf_GFP.cueenstay.avg + GA_erf_GFP.cueenswitch.avg) / 4;
-averageAcrossConds_target = GA_erf_GFP.targetchstay;
-averageAcrossConds_target.avg = (GA_erf_GFP.targetchstay.avg + GA_erf_GFP.targetchswitch.avg + GA_erf_GFP.targetenstay.avg + GA_erf_GFP.targetenswitch.avg) / 4;
-
-figure('Name','Average across all conds - cue window'); 
-plot(averageAcrossConds_cue.time, averageAcrossConds_cue.avg); 
-xlim([-0.2 0.75]);
-figure('Name','Average across all conds - target window'); 
-plot(averageAcrossConds_target.time, averageAcrossConds_target.avg); 
-xlim([-0.2 0.75]);
-
-
-%% Statistical analysis
-
-fprintf('\n= STATS: CLUSTER-BASED PERMUTATION TESTS =\n');
-
-cfg = [];
-cfg.channel = {'all', '-AG083', '-AG087', '-AG088', '-AG082', '-AG084', '-AG086'}; % {'MEG'};
-cfg.latency = [0 0.75]; % time interval over which the experimental 
-                     % conditions must be compared (in seconds)
-latency_cue = [0.408 0.683];%[0.385 0.585];%[0.4 0.6];%[0.425 0.55]; % time window for cue-locked effect
-latency_target = [0.2 0.3];%[0.22 0.32];%[0.25 0.3]; % time window for target-locked effect 
-                            % tried [0.2 0.4], not sig
-
-load([ResultsFolder 'neighbours.mat']); % this is the sensor layout - it's the same for all subjects (even same across experiments). So just prepare once & save, then load here
-cfg.neighbours = neighbours;  % same as defined for the between-trials experiment
-
-cfg.avgovertime = 'yes'; % if yes, this will average over the entire time window chosen in cfg.latency 
-                        % (useful when you want to look at a particular component, e.g. to look at M100,
-                        % cfg.latency = [0.08 0.12]; cfg.avgovertime = 'yes'; )
-cfg.method = 'montecarlo';
-cfg.statistic = 'depsamplesT'; %cfg.statistic = 'ft_statfun_indepsamplesT'; OR 'ft_statfun_depsamplesFmultivariate';
-cfg.correctm = 'cluster'; %'no'; % its common in MEG studies to run uncorrected at alpha = 0.001
-cfg.clusteralpha = 0.05;
-cfg.clusterstatistic = 'maxsum';
-cfg.minnbchan = 3; % minimum number of neighbourhood channels required to be significant 
-                   % in order to form a cluster 
-                   % (default: 0, ie. each single channel can be considered a cluster).
-                   % 4 or 5 is a good choice; 2 is too few coz it's even below
-                   % the resolution of the sensor layout(??)
-
-cfg.tail = 0;
-cfg.clustertail = 0; % 2 tailed test
-cfg.alpha = 0.05;
-cfg.correcttail = 'prob'; % correct for 2-tailedness
-cfg.numrandomization = 500; % Rule of thumb: use 500, and double this number if it turns out 
-    % that the p-value differs from the critical alpha-level (0.05 or 0.01) by less than 0.02
-
-numSubjects = length(files);
-within_design_2x2 = zeros(2,2*numSubjects);
-within_design_2x2(1,:) = repmat(1:numSubjects,1,2);
-within_design_2x2(2,1:numSubjects)        = 1;
-within_design_2x2(2,numSubjects+1:2*numSubjects) = 2;
-
-cfg.design = within_design_2x2;
-cfg.uvar  = 1; % row of design matrix that contains unit variable (in this case: subjects)
-cfg.ivar  = 2; % row of design matrix that contains independent variable (i.e. the conditions)
-
-
-% Run the statistical tests
-data = allSubjects_erf; % make an easy name
-
-% Interaction (i.e. calc sw$ in each lang, then test the 2 sw$)
-% http://www.fieldtriptoolbox.org/faq/how_can_i_test_an_interaction_effect_using_cluster-based_permutation_tests
-%{
-for i = 1:numSubjects
-    allSubj_cue_ch_switchCost{i} = allSubjects_erf.cuechstay{i}; % difference btwn chstay & chswitch (calc'd on next line)
-    allSubj_cue_ch_switchCost{i}.avg = allSubjects_erf.cuechswitch{i}.avg - allSubjects_erf.cuechstay{i}.avg; % chswitch - chstay
-    allSubj_cue_en_switchCost{i} = allSubjects_erf.cueenstay{i};
-    allSubj_cue_en_switchCost{i}.avg = allSubjects_erf.cueenswitch{i}.avg - allSubjects_erf.cueenstay{i}.avg; % enswitch - enstay
-    allSubj_target_ch_switchCost{i} = allSubjects_erf.targetchstay{i};
-    allSubj_target_ch_switchCost{i}.avg = allSubjects_erf.targetchswitch{i}.avg - allSubjects_erf.targetchstay{i}.avg; % chswitch - chstay
-    allSubj_target_en_switchCost{i} = allSubjects_erf.targetenstay{i};
-    allSubj_target_en_switchCost{i}.avg = allSubjects_erf.targetenswitch{i}.avg - allSubjects_erf.targetenstay{i}.avg; % enswitch - enstay
-end
-%}
-% manual calculation above is now replaced by combine_conds_for_T_Test()
-fprintf('\nCUE window -> Testing lang x ttype interaction:\n');
-[timelock1, timelock2] = combine_conds_for_T_test('fieldtrip', 'interaction', data.cuechstay, data.cuechswitch, data.cueenstay, data.cueenswitch);
-cfg.latency = latency_cue; % time interval over which the experimental 
-[cue_interaction] = ft_timelockstatistics(cfg, timelock1{:}, timelock2{:}); %allSubj_cue_ch_switchCost{:}, allSubj_cue_en_switchCost{:});
-fprintf('\nTARGET window -> Testing lang x ttype interaction:\n');
-[timelock1, timelock2] = combine_conds_for_T_test('fieldtrip', 'interaction', data.targetchstay, data.targetchswitch, data.targetenstay, data.targetenswitch); %'2-1 vs 4-3');
-cfg.latency = latency_target; % time interval over which the experimental 
-[target_interaction] = ft_timelockstatistics(cfg, timelock1{:}, timelock2{:}); %allSubj_target_ch_switchCost{:}, allSubj_target_en_switchCost{:});
-
-% Main effect of lang (collapse across stay-switch)
-%{
-for i = 1:numSubjects
-    allSubj_cue_ch{i} = allSubjects_erf.cuechstay{i};
-    allSubj_cue_ch{i}.avg = (allSubjects_erf.cuechstay{i}.avg + allSubjects_erf.cuechswitch{i}.avg) / 2; % cue_ch_all.avg = (cuechstay.avg + cuechsw.avg) / 2
-    allSubj_cue_en{i} = allSubjects_erf.cueenstay{i};
-    allSubj_cue_en{i}.avg = (allSubjects_erf.cueenstay{i}.avg + allSubjects_erf.cueenswitch{i}.avg) / 2;
-    allSubj_target_ch{i} = allSubjects_erf.targetchstay{i};
-    allSubj_target_ch{i}.avg = (allSubjects_erf.targetchstay{i}.avg + allSubjects_erf.targetchswitch{i}.avg) / 2; % target_ch_all.avg = (targetchstay.avg + targetchsw.avg) / 2
-    allSubj_target_en{i} = allSubjects_erf.targetenstay{i};
-    allSubj_target_en{i}.avg = (allSubjects_erf.targetenstay{i}.avg + allSubjects_erf.targetenswitch{i}.avg) / 2;    
-end
-%}
-fprintf('\nCUE window -> Main effect of lang:\n');
-[timelock1, timelock2] = combine_conds_for_T_test('fieldtrip', 'main_12vs34', data.cuechstay, data.cuechswitch, data.cueenstay, data.cueenswitch);
-cfg.latency = latency_cue; % time interval over which the experimental 
-[cue_lang] = ft_timelockstatistics(cfg, timelock1{:}, timelock2{:}); %allSubj_cue_ch{:}, allSubj_cue_en{:});
-fprintf('\nTARGET window -> Main effect of lang:\n');
-[timelock1, timelock2] = combine_conds_for_T_test('fieldtrip', 'main_12vs34', data.targetchstay, data.targetchswitch, data.targetenstay, data.targetenswitch); %'2-1 vs 4-3');
-cfg.latency = latency_target; % time interval over which the experimental 
-[target_lang] = ft_timelockstatistics(cfg, timelock1{:}, timelock2{:}); %allSubj_target_ch{:}, allSubj_target_en{:});
-
-% Main effect of switch (collapse across langs)
-%{
-for i = 1:numSubjects
-    allSubj_cue_stay{i} = allSubjects_erf.cuechstay{i};
-    allSubj_cue_stay{i}.avg = (allSubjects_erf.cuechstay{i}.avg + allSubjects_erf.cueenstay{i}.avg) / 2;
-    allSubj_cue_switch{i} = allSubjects_erf.cuechswitch{i};
-    allSubj_cue_switch{i}.avg = (allSubjects_erf.cuechswitch{i}.avg + allSubjects_erf.cueenswitch{i}.avg) / 2;
-    allSubj_target_stay{i} = allSubjects_erf.targetchstay{i};
-    allSubj_target_stay{i}.avg = (allSubjects_erf.targetchstay{i}.avg + allSubjects_erf.targetenstay{i}.avg) / 2;
-    allSubj_target_switch{i} = allSubjects_erf.targetchswitch{i};
-    allSubj_target_switch{i}.avg = (allSubjects_erf.targetchswitch{i}.avg + allSubjects_erf.targetenswitch{i}.avg) / 2;
-end
-%}
-fprintf('\nCUE window -> Main effect of ttype:\n');
-[timelock1, timelock2] = combine_conds_for_T_test('fieldtrip', 'main_13vs24', data.cuechstay, data.cuechswitch, data.cueenstay, data.cueenswitch);
-cfg.latency = latency_cue; % time interval over which the experimental 
-[cue_ttype] = ft_timelockstatistics(cfg, timelock1{:}, timelock2{:}); %allSubj_cue_stay{:}, allSubj_cue_switch{:});
-fprintf('\nTARGET window -> Main effect of ttype:\n');
-[timelock1, timelock2] = combine_conds_for_T_test('fieldtrip', 'main_13vs24', data.targetchstay, data.targetchswitch, data.targetenstay, data.targetenswitch); %'2-1 vs 4-3');
-cfg.latency = latency_target; % time interval over which the experimental 
-[target_ttype] = ft_timelockstatistics(cfg, timelock1{:}, timelock2{:}); %allSubj_target_stay{:}, allSubj_target_switch{:});
-
-save([ResultsFolder 'stats.mat'], 'cue_interaction', 'cue_lang', 'cue_ttype', 'target_interaction', 'target_lang', 'target_ttype');
-
-
-%% Plotting: use ft_clusterplot & ft_topoplot
-
-load([ResultsFolder 'stats.mat']);
-load([ResultsFolder 'lay.mat']);
-load([ResultsFolder 'GA_erf_allConditions.mat']); % only required if using ft_topoplot
-
-% select which comparison to plot
-stat = cue_ttype; % here we plot the only effect that seems to survive correction (at minnbchan = 0)
-                  % to explore where (both in terms of time & location) the effect might have possibly
-                  % occurred
-                  % [TODO] then we can define more precise time window &
-                  % set avgovertime = 'yes', which should give us more
-                  % sensitivity, and allow us to increase the minnbchan to
-                  % a reasonable number: 2 (ft tutorial) or 4 (Paul)
-
-%% ft_clusterplot (based on t-values)
-cfg = [];
-%cfg.zlim = [-5 5]; % set scaling (range of t-values) (usually using automatic is ok) 
-cfg.highlightcolorpos = [1 1 1]; % white for pos clusters
-cfg.highlightcolorneg = [255/255 192/255 203/255]; % pink for neg clusters
-cfg.alpha = 0.05;
-%cfg.colorbar = 'yes'; % shows the scaling
-cfg.layout = lay;
-ft_clusterplot(cfg, stat);
-
-
-%% ft_topoplot (based on actual erf amplitude) 
-
-% first, define the 2 conds to be compared (this time using cross-subject averages, i.e. GA)
-% here we look at main effect of ttype in cue window, so we collapse across langs
-GA_cue_stay = GA_erf.cuechstay;
-GA_cue_stay.avg = (GA_erf.cuechstay.avg + GA_erf.cueenstay.avg) / 2;
-GA_cue_switch = GA_erf.cuechswitch;
-GA_cue_switch.avg = (GA_erf.cuechswitch.avg + GA_erf.cueenswitch.avg) / 2;
-
-% then, calc the diff btwn the 2 conds
-cfg  = [];
-cfg.operation = 'subtract';
-cfg.parameter = 'avg';
-GA_cue_stayvsswitch = ft_math(cfg, GA_cue_stay, GA_cue_switch);
-
-
-% define parameters for plotting
-start_time = stat.cfg.latency(1); % get the time window specified earlier in stat analysis
-end_time = stat.cfg.latency(end);
-timestep = 0.05; %(end_time - start_time) / 15; % length of time interval you want in each subplot (in seconds); 
-                                                % alt: specify how many subplots you want (e.g. 15)
-sampling_rate = 200; % we downsampled to 200Hz
-sample_count = length(stat.time); % number of samples in MEG data (in the ERF time window)
-j = [start_time : timestep : end_time];   % define the time interval (in seconds) for each subplot
-m = [1 : timestep*sampling_rate : sample_count];  % corresponding sample indices in MEG data
-
-% ensure stat.cfg.alpha (the alpha level we specified earlier in ft_timelockstatistics) still exists
-if ~isfield(stat.cfg,'alpha'); stat.cfg.alpha = 0.05; end; % if not, set it (new version corrects for 2-tailedness, so no need to use 0.025)
-
-%{
-if (length(stat.posclusters) == 0) % if no clusters were found at all, code below will throw error
-    % so create a fake one (just to allow code below to run w/o error)
-    stat.posclusters(1).prob = 1; 
-    stat.posclusters(1).clusterstat = -9; 
-    stat.posclusters(1).stddev = 0; 
-    stat.posclusters(1).cirange = 0;
-end
-if (length(stat.negclusters) == 0) % do the same for neg clusters
-    stat.negclusters(1).prob = 1; 
-    stat.negclusters(1).clusterstat = -9; 
-    stat.negclusters(1).stddev = 0; 
-    stat.negclusters(1).cirange = 0;
-end
-%}
-
-% get all p-values associated with the clusters
-pos_cluster_pvals = [stat.posclusters(:).prob];
-neg_cluster_pvals = [stat.negclusters(:).prob];
-% find which clusters are significant, outputting their indices as held in stat.posclusters
-pos_signif_clust = find(pos_cluster_pvals < stat.cfg.alpha);
-neg_signif_clust = find(neg_cluster_pvals < stat.cfg.alpha);
-% make a boolean matrix of which (channel,time)-pairs are part of a significant cluster
-pos = ismember(stat.posclusterslabelmat, pos_signif_clust); % I think stat.mask is simply combining pos & neg 
-neg = ismember(stat.negclusterslabelmat, neg_signif_clust); % (i.e. stat.mask == pos | neg)
-
-% Ensure the channels have the same order in the grand average and in the statistical output
-% This might not be the case, because ft_math might shuffle the order  
-[i1,i2] = match_str(GA_cue_stayvsswitch.label, stat.label);
-% i1 holds a list of channel numbers in the grand averages
-% i2 holds a list of channel numbers in the stat output
-
-figure;  
-for k = 1:length(j)-1; % create one subplot for each time interval
-     subplot(3,5,k); % 3 * 5 = 15 subplots 
-     
-     cfg = [];   
-     cfg.xlim=[j(k) j(k+1)];   
-     %cfg.zlim = [-5e-14 5e-14];  % set scaling (usually using automatic is ok) 
-     pos_int = zeros(numel(GA_cue_stayvsswitch.label),1); % initialise the arrays with 0s
-     neg_int = zeros(numel(GA_cue_stayvsswitch.label),1);
-     pos_int(i1) = all(pos(i2, m(k):m(k+1)), 2); % if a channel maintains significance thruout this time interval, then
-     neg_int(i1) = all(neg(i2, m(k):m(k+1)), 2); % we set this channel to 1 (to be highlighted)
-     % not sure why it has to "maintain significance"; here I try with only requiring sig for half of time pts in this interval
-     a = neg(i2, m(k):m(k+1));
-     neg_int(i1) = sum(a, 2) > size(a, 2) / 2;
-     
-     sig_channels = find(pos_int | neg_int); % get indices of all significant channels
-     if length(sig_channels) ~= 0 % if any sig channels found, report which channels these are
-         fprintf(['In time interval [' num2str(cfg.xlim) '], these channels were significant:\n']);
-         stat.label(sig_channels)
-     end
-     cfg.highlight = 'on';
-     cfg.highlightchannel = sig_channels; % highlight these channels on topoplot
-     cfg.highlightcolor = [255/255 192/255 203/255]; % pink colour
-
-     cfg.comment = ['time = [' num2str(cfg.xlim) ']   ' strjoin(stat.label(sig_channels))]; % display time interval & names of sig channels
-     %cfg.comment = 'auto'; % display date, xlim (time interval), zlim (amplitude range)
-     cfg.commentpos = 'title';   
-     %cfg.colorbar = 'yes'; % shows the scaling
-     cfg.layout = lay;
-     ft_topoplotER(cfg, GA_cue_stayvsswitch);
-end  
-
-%% To plot the actual effect (i.e. average ERF of sig channels)
-% alt: simply go to the multiplotER generated earlier, select the sig channels & plot
-
-% effect in cue window
-cfg        = [];
-cfg.channel = stat.label(find(cue_ttype.mask)); % autoly retrieve sig channels (only works with cfg.avgovertime = 'yes')
-%{'AG017', 'AG018', 'AG019', 'AG022', 'AG023', 'AG025', 'AG029', 'AG063', 'AG064', 'AG143'}; % 10 sig channels in cluster
-
-figure('Name','Average ERF of significant channels - cue window');
-ft_singleplotER(cfg, GA_erf.cuechstay, GA_erf.cuechswitch, GA_erf.cueenstay, GA_erf.cueenswitch);
-legend(eventnames_8(conds_cue));
-
-% effect in target window
-cfg        = [];
-cfg.channel = stat.label(find(target_lang.mask)); % autoly retrieve sig channels (only works with cfg.avgovertime = 'yes')
-
-figure('Name','Average ERF of significant channels - target window');
-ft_singleplotER(cfg, GA_erf.targetchstay, GA_erf.targetchswitch, GA_erf.targetenstay, GA_erf.targetenswitch);
-legend(eventnames_8(conds_target));
-%}
