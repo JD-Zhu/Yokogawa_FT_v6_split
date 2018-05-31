@@ -6,10 +6,11 @@
 function [] = common()
     % specify all paths as absolute paths, to avoid any issues when we 'cd' into diff folders
     
-    global DataFolder; global ResultsFolder; global ResultsFolder_ROI;
+    global DataFolder; global ResultsFolder; global ResultsFolder_ROI; global ResultsFolder_Source;
     DataFolder = [pwd '\\..\\..\\RAW_DATA\\'];
     ResultsFolder = [pwd '\\..\\..\\results_ERF\\']; % all subjects' erf data will be stored here
     ResultsFolder_ROI = [pwd '\\..\\..\\results_ROI\\']; % all subjects' ROI source-reconstruction results will be stored here
+    ResultsFolder_Source = [pwd '\\..\\..\\results_SourceInt\\']; % all subjects' source localisation results
     
     global filename_suffix; % select which pre-processing option: noPCA, reject components 1:3, or normal (reject components 1:5)
     % also need to change the last few lines in reject_response_component.m & load correct result files into the ResultsFolder

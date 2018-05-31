@@ -2,7 +2,15 @@
 %
 % stats_ROI.m
 %
-% grand average & statistical analysis on reconstructed ROI activities
+% Grand average & statistical analysis on reconstructed ROI activities
+%
+%    Q1: do stats across subjects?
+%    A: yes. Plot grand ave first, just to get an idea of what effect is there. Then run stats.
+%
+%    Q2. use ft_timelockstatistics (exactly the same way as doing stats on erf)?
+%    A: yes.
+%    (but ft_timelockstats takes in erf structures, here we don't have the .avg field, just naked data)
+%    A: either hack it into that format, or use EEGlab (statcond, std_stat).
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

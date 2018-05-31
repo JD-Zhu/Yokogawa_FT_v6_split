@@ -17,7 +17,8 @@ function source_v1
     %addpath([pwd '\\coreg-master\\']); % allow access to coreg scripts
 
     % run the #define section
-    global DataFolder; global ResultsFolder; global ResultsFolder_ROI; global filename_suffix; 
+    global DataFolder; global ResultsFolder; global ResultsFolder_ROI; global ResultsFolder_Source;
+    global filename_suffix; 
     global eventnames; global conds_cue; global conds_target;
     common();
 
@@ -138,10 +139,6 @@ function source_v1
 
         %% Step 3: prepare sourcemodel & leadfield
 
-        % Load template brain MNI space
-        %template_mri          = ft_read_mri(fullfile(templates_dir, 'template\\anatomy\\single_subj_T1_1mm.nii')); %This is the standard which matches AAL space
-        %template_mri.coordsys = 'nifti_spm'; % So that FieldTrip knows how to interpret the coordinate system
-        
         % Create template grid (aka. template sourcemodel)
         % Method 1:
         %{
@@ -279,49 +276,17 @@ function source_v1
         source_target_en = ft_sourceanalysis(cfg, target_en);
         
         
-%% TODO: Subtract the output from the 2 conditions to find the difference - this creates 
-% a blob showing where the effect occurs. Then use ft_sourceinterpoloate to warp it 
-% into common space & average the blob across subjects. Use SPM (or see link below) to read out
-% what brain regions the final averaged blob contains.
+        % load template MRI for warping into common (MNI) space
+        template_mri          = ft_read_mri(fullfile(templates_dir, 'single_subj_T1_1mm.nii')); %This is the standard which matches AAL space
+        template_mri.coordsys = 'nifti_spm'; % so that FieldTrip knows how to interpret the coordinate system
 
-% Mapping the blob onto an atlas:
-% http://www.fieldtriptoolbox.org/tutorial/aarhus/beamformingerf
+        % localise the source of each effect (ie. location in the brain that shows strongest diff btwn the 2 conds)
+        save_filename = [ResultsFolder_Source 'cue_ttype\\' SubjectID];
+        localise_effect_source(source_cue_stay, source_cue_switch, template_sourcemodel, template_mri, save_filename);
 
-        % Compute Percentage Power Change From Baseline
-        sourceDiff         = source_target_en;
-        sourceDiff.avg.pow = (source_target_en.avg.pow - source_target_ch.avg.pow) ./ source_target_ch.avg.pow;
-
-        %load template for display in MNI sapce and replace subject grid with MNI
-        %grid
-        template_mri   = ft_read_mri(templatefile);
-        sourceDiff.pos = template_sourcemodel.pos;
-
-        %Smear the point solution into an MRI overlay
-        cfg              = [];
-        cfg.voxelcoord   = 'no';
-        cfg.parameter    = 'pow';
-        cfg.interpmethod = 'nearest';
-        source_int       = ft_sourceinterpolate(cfg, sourceDiff, template_mri);
-
-        %Finally, we can plot the result using ft_sourceplot.
-        cfg              = [];
-        cfg.method       = 'ortho';
-        cfg.funparameter = 'pow';
-        %cfg.funcolorlim  = [-0.1 0.1]; % Do this programmatically
-        cfg.opacitylim   = 'zeromax';
-        cfg.location     = [64 -32 8];
-        cfg.funcolormap  = 'jet';
-        ft_sourceplot(cfg,source_int);
-
-        save([filename_base,'_source_int_alpha'],'source_int')
-
-        %% Export to nifti format
-        cfg           = [];
-        cfg.filetype  = 'nifti';
-        cfg.filename  = filename_base;
-        cfg.parameter = 'pow';
-        ft_sourcewrite(cfg,source_int);
-        %}
+        save_filename = [ResultsFolder_Source 'target_lang\\' SubjectID];
+        localise_effect_source(source_target_ch, source_target_en, template_sourcemodel, template_mri, save_filename);
+ 
 
         %% Step 6: ROI analysis (source reconstruction) (independent from sensor-level results)
         % Here we use the atlas to create VEs (virtual sensors) - 1 VE represents 1 ROI
@@ -462,25 +427,79 @@ function source_v1
         end
         %}
 
-
-        %% Step 6: stats
-%{
-        % Q1: do stats across subjects?
-        A: yes. Plot grand ave first, just to get an idea of what effect is there. Then run stats.
-        
-        % Q2. use ft_timelockstatistics (exactly the same way as doing stats on erf)?
-        A: yes.
-        % (but ft_timelockstats takes in erf structures, here we don't have the .avg field, just naked data)
-        A: either hack it, or use EEGlab (statcond, std_stat).
-
-        Done: Implemented in stats_ROI.m
-%}
+        % Statistical analysis on the ROI activities will be carried out in stats_ROI.m
     end
 
 
+    % TODO: Statistical analysis for Step 5 (Source localisation)
+    
+    % For each effect (cue_ttype & target_lang):
+    % - read in the blob for each subject (all in common space) from ResultsFolder_Source
+    % - average the blob across all subjects
+    % - use SPM (or whatever) to read out what brain regions the averaged blob contains.
+
+    
+    % Alternative way to read out the anatomical label of a blob, by looking up an atlas:
+    % http://www.fieldtriptoolbox.org/tutorial/aarhus/beamformingerf
+    % Doesn't work: (see error below - can't get the conversion Nifti_SPM <-> MNI working)
+    %Error using ft_sourceplot:
+    %coordinate systems do not match (template mri in Nifti_SPM coords, atlas in MNI coords)
+
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % SUBFUNCTIONS
+    % SUBFUNCTIONS for source localisation
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+    % calc the difference btwn 2 conditions at all source vertices,
+    % see where the effect is strongest
+    %
+    % @param cond1, cond2: source result for each cond, as obtained from ft_sourceanalysis
+    % @param template_mri: for interpolation into common space
+    % @param save_filename: where to save 'source_int' (the blob in common space)
+    % 
+    function localise_effect_source(cond1, cond2, template_sourcemodel, template_mri, save_filename)
+        % Compute Percentage Power Difference btwn the 2 conditions
+        sourceDiff         = cond2;
+        sourceDiff.avg.pow = (cond2.avg.pow - cond1.avg.pow) ./ cond1.avg.pow;
+
+        % replace subject grid with MNI grid
+        sourceDiff.pos = template_sourcemodel.pos;
+
+        % Smear the point solution into an MRI overlay (ie. warp the blob into common space)
+        cfg_source              = [];
+        cfg_source.voxelcoord   = 'no';
+        cfg_source.parameter    = 'pow';
+        cfg_source.interpmethod = 'nearest';
+        source_int              = ft_sourceinterpolate(cfg_source, sourceDiff, template_mri);
+
+        % Finally, we can plot the result using ft_sourceplot
+        %{
+        cfg_source              = [];
+        %cfg_source.atlas        = fullfile(templates_dir, 'ROI_MNI_V4.nii'); % for looking up the anatomical label
+                                                                      % of the source identified
+                                                                      % coordsys = 'mni'
+        cfg_source.method       = 'ortho';
+        cfg_source.funparameter = 'pow';
+        %cfg_source.funcolorlim  = [-0.1 0.1]; % Do this programmatically
+        cfg_source.opacitylim   = 'zeromax';
+        %cfg_source.location     = [64 -32 8];
+        cfg_source.funcolormap  = 'jet';
+        ft_sourceplot(cfg_source, source_int);
+        %}
+        
+        save(save_filename, 'source_int');
+
+        % Export to nifti format
+        cfg_source           = [];
+        cfg_source.filetype  = 'nifti';
+        cfg_source.filename  = save_filename;
+        cfg_source.parameter = 'pow';
+        ft_sourcewrite(cfg_source, source_int);
+    end
+    
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % SUBFUNCTIONS for ROI analysis
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     % retrieve the xyz-coordinates of the given vertices
