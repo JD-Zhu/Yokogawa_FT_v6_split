@@ -87,7 +87,7 @@ function source_v1
         erf_target_combined = subject_data.erf_target_combined;
         clear subject_data;
 
-        %% only need this section if doing freq/time-freq analysis
+        %% only need this section if restricting to a certain freq band
         % (remember: erf is averaging then calc, freq is calc'ing on indi trials then average)
         % NOTE: you can do this elsewhere & simply load the results (just like you did above with the ERF results) 
     %{
@@ -103,7 +103,7 @@ function source_v1
         data       = ft_redefinetrial(cfg, data);
 
 
-        %% Bandpass Filter (to get the required freq range)
+        %% Bandpass Filter (to get the required freq band)
         cfg           = [];
         cfg.channel   = 'all';
         cfg.bpfilter  = 'yes';
@@ -435,11 +435,13 @@ function source_v1
     
     % For each effect (cue_ttype & target_lang):
     % - read in the blob for each subject (all in common space) from ResultsFolder_Source
-    % - average the blob across all subjects
-    % - use SPM (or whatever) to read out what brain regions the averaged blob contains.
+    % - average the blob across all subjects (ft_sourcegrandaverage)
+    % - export averaged blob to NifTi format, then use xjview to read out 
+    % what brain regions the averaged blob contains
 
     
-    % Alternative way to read out the anatomical label of a blob, by looking up an atlas:
+    % Alternative way to read out the anatomical label of a blob (for each indi subject), 
+    % by looking up an atlas during ft_sourceplot:
     % http://www.fieldtriptoolbox.org/tutorial/aarhus/beamformingerf
     % Doesn't work: (see error below - can't get the conversion Nifti_SPM <-> MNI working)
     %Error using ft_sourceplot:
