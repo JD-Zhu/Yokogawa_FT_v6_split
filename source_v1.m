@@ -442,16 +442,40 @@ function source_v1
         end
     end
 
+%TODO: run this section & DL xjview to view blob
 
-    % TODO: Statistical analysis for Step 5 (Source localisation)
+    % Statistical analysis for Step 5 (Source localisation)
     % Q: do we actually do any stats?? see tutorial link...
     
-    % For each effect (cue_ttype & target_lang):
-    % - read in the blob for each subject (all in common space) from ResultsFolder_Source
-    % - average the blob across all subjects (ft_sourcegrandaverage)
-    % - export averaged blob to NifTi format, then use xjview to read out 
-    % what brain regions the averaged blob contains
-
+    contrasts = listFolders(ResultsFolder_Source);
+    
+    % each cycle processes one contrast (e.g. cue_ttype, target_lang)
+    for index = 1:length(contrasts)
+        % read in the blob for each subject (all in common space) from ResultsFolder_Source
+        blobs_folder = [ResultsFolder_Source cell2mat(contrasts(index)) '\\'];
+        blobs_files = dir([blobs_folder '*.mat']);
+        
+        for subject = 1:length(blobs_files)
+            temp = load([blobs_folder blobs_files(subject).name]);
+            blobs{subject} = temp.source_int;
+        end
+        
+        % average the blob across all subjects
+        cfg = [];
+        cfg.parameter = 'pow';
+        [grandave] = ft_sourcegrandaverage(cfg, blobs{:});
+        
+        save_filename = [blobs_folder 'average_blob'];
+        save(save_filename, 'grandave', '-v7.3');
+        
+        % export averaged blob to NifTi format, then use xjview to read out 
+        % what brain regions the averaged blob contains
+        cfg           = [];
+        cfg.filetype  = 'nifti';
+        cfg.filename  = save_filename;
+        cfg.parameter = 'pow';
+        ft_sourcewrite(cfg, grandave);
+    end
     
     % Alternative way to read out the anatomical label of a blob (for each indi subject), 
     % by looking up an atlas during ft_sourceplot:
