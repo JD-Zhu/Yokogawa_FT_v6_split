@@ -22,8 +22,8 @@ clc
 % = Settings =
 % Please adjust as required:
 
-channelrepair = true; % repair bad/rejected channels?
-calc_uncleaned_erf = false; % calculate uncleaned erf? (for quality check of response-component rejection)
+CHANNEL_REPAIR = true; % repair bad/rejected channels?
+CALC_UNCLEANED_ERF = false; % calculate uncleaned erf? (for quality check of response-component rejection)
 
 
 
@@ -140,7 +140,7 @@ for i = 1:length(SubjectIDs)
         load([SubjectFolder S2_output_filename]);
         
         % perform channel repair if needed
-        if (channelrepair)
+        if (CHANNEL_REPAIR)
             load([ResultsFolder 'neighbours.mat']);
             all_labels = all_blocks_clean.cfg.channel; % full list of 160 labels
             all_blocks_clean = repair_bad_channels(all_blocks_clean, neighbours, all_labels);
@@ -150,7 +150,7 @@ for i = 1:length(SubjectIDs)
         % === ft_redefine all event types (i.e. 8 real conditions + 'response' event) ===
 
         % in uncleaned data
-        if (calc_uncleaned_erf)
+        if (CALC_UNCLEANED_ERF)
             for j = 1:length(eventnames)
                 cfg = [];
                 cfg.trials = events_allBlocks.(eventnames{j});
@@ -176,7 +176,7 @@ for i = 1:length(SubjectIDs)
         % === compute ERFs ===
 
         % in uncleaned data (just for quality check of PCA component rejection)
-        if (calc_uncleaned_erf)
+        if (CALC_UNCLEANED_ERF)
             for j = 1:length(eventnames)
                 cfg         = [];
                 %cfg.nanmean = 'yes';
@@ -211,7 +211,7 @@ for i = 1:length(SubjectIDs)
     %load([ResultsFolder SubjectID S3_output_filename]);
     %load([ResultsFolder 'lay.mat']); 
     
-    if (calc_uncleaned_erf)
+    if (CALC_UNCLEANED_ERF)
         %plot_ERF(erf, erf_clean, lay, true);
     else % clean erf only
         %plot_ERF([], erf_clean, lay, false);

@@ -4,7 +4,7 @@ function source_v1
     % Please adjust as required:
 
     % run the source localisation (of sensor effects)?
-    RUN_SOURCE_LOCALISATION = false;
+    RUN_SOURCE_LOCALISATION = true;
     
     % run the ROI analysis?
     RUN_ROI_ANALYSIS = false;
@@ -34,11 +34,12 @@ function source_v1
                                            % These usually come with the FT toolbox, but for ease of access
                                            % (consistent path across computers), I've stored a copy here.                                  
     MRI_folder = [pwd '\\..\\..\\..\\..\\MRI_databases\\HCP\\']; % location of your MRI database 
-                                                                 % (consistent relative path across computers)
+                                                                 % (consistent relative path across computers)                                                                                                                                  
+    Beamformer_output_file = 'beamformer.mat'; % filename for saving the beamformer output (to avoid running the whole thing every time)
     SubjectFolders = listFolders(DataFolder);
 
 
-    % each cycle processes one subject
+    %% each cycle processes one subject
     for h = 1:length(SubjectFolders)
 
         SubjectID = SubjectFolders{h};
@@ -143,106 +144,121 @@ function source_v1
     %}    
 
 
-        %% Step 3: prepare sourcemodel & leadfield
+        %% if haven't already done the beamforming before, do it now & save a copy
+        if (exist(Beamformer_output_file, 'file') ~= 2)    
 
-        % Create template grid (aka. template sourcemodel)
-        % Method 1:
-        %{
-        % Load template headmodel
-        load([templates_dir, 'standard_singleshell']);
-        template_headmodel = vol; % rename the loaded variable                                     
-        template_headmodel = ft_convert_units(template_headmodel, 'cm'); % convert headmodel into standard units (CTF convention is to express everything in cm)
+            %% Step 3: prepare sourcemodel & leadfield
 
-        % create template sourcemodel using template headmodel
-        cfg             = [];
-        cfg.grid.xgrid  = -20:0.5:20; % x-axis range: -20 ~ 20cm, step 0.5cm (change this value to adjust reso)
-        cfg.grid.ygrid  = -20:0.5:20;
-        cfg.grid.zgrid  = -20:0.5:20;
-        cfg.grid.unit   = 'cm';
-        cfg.grid.tight  = 'yes';
-        cfg.inwardshift = -0.1;
-        cfg.headmodel   = template_headmodel;
-        template_sourcemodel = ft_prepare_sourcemodel(cfg);
-        %}
-        % Method 2: load the template sourcemodel provided by FT
-        load([templates_dir, 'standard_sourcemodel3d5mm']); % usually 10mm grid is fine.
-                                                            % here we use a higher resolution grid (5mm),
-                                                            % to increase the number of vertices assinged to
-                                                            % the parcel 'Frontal_Med_Orb_L' (in AAL atlas)
-                                                            % Otherwise it only contains 3 vertices - not enough to compute centroid!
-        template_sourcemodel = sourcemodel; % rename the loaded variable
-        clear sourcemodel;
+            % Create template grid (aka. template sourcemodel)
+            % Method 1:
+            %{
+            % Load template headmodel
+            load([templates_dir, 'standard_singleshell']);
+            template_headmodel = vol; % rename the loaded variable                                     
+            template_headmodel = ft_convert_units(template_headmodel, 'cm'); % convert headmodel into standard units (CTF convention is to express everything in cm)
+
+            % create template sourcemodel using template headmodel
+            cfg             = [];
+            cfg.grid.xgrid  = -20:0.5:20; % x-axis range: -20 ~ 20cm, step 0.5cm (change this value to adjust reso)
+            cfg.grid.ygrid  = -20:0.5:20;
+            cfg.grid.zgrid  = -20:0.5:20;
+            cfg.grid.unit   = 'cm';
+            cfg.grid.tight  = 'yes';
+            cfg.inwardshift = -0.1;
+            cfg.headmodel   = template_headmodel;
+            template_sourcemodel = ft_prepare_sourcemodel(cfg);
+            %}
+            % Method 2: load the template sourcemodel provided by FT
+            load([templates_dir, 'standard_sourcemodel3d5mm']); % usually 10mm grid is fine.
+                                                                % here we use a higher resolution grid (5mm),
+                                                                % to increase the number of vertices assinged to
+                                                                % the parcel 'Frontal_Med_Orb_L' (in AAL atlas)
+                                                                % Otherwise it only contains 3 vertices - not enough to compute centroid!
+            template_sourcemodel = sourcemodel; % rename the loaded variable
+            clear sourcemodel;
+
+            % Warp template grid into subject space
+            cfg                = [];
+            cfg.grid.warpmni   = 'yes';
+            cfg.grid.template  = template_sourcemodel; % standard sourcemodel
+            cfg.grid.nonlinear = 'yes';
+            cfg.mri            = mri; % individual mri
+            sourcemodel = ft_prepare_sourcemodel(cfg); % creates individual sourcemodel
+                                                       % (the grid points map 1-to-1 onto the template grid points, with the .pos field 
+                                                       % specifying the actual coordinates of these grid points in subject space)
+
+            % Plots for sanity checks
+            % plot headmodel, grid, and mri
+            %{        
+            ft_determine_coordsys(mri, 'interactive','no'); hold on
+            ft_plot_vol(headmodel);
+            ft_plot_mesh(sourcemodel.pos(sourcemodel.inside,:));
+            %}           
+            % plot headmodel, grid, and sensor locations
+            %{
+            figure;
+            ft_plot_sens(grads, 'style', '*b'); % plot the MEG sensor locations
+            ft_plot_vol(headmodel, 'edgecolor', 'cortex'); alpha 0.4; % plot the single shell (i.e. brain shape)
+            ft_plot_mesh(sourcemodel.pos(sourcemodel.inside,:)); % plot all vertices (ie. grid points) that are inside the brain
+            %}
+
+            % Create the leadfield
+            cfg            = [];
+            cfg.grad       = grads;
+            cfg.headmodel  = headmodel; % individual headmodel (from coreg)
+            cfg.reducerank = 2; % Should check this is appropriate - also check the rank of the data as we project out mouth artifacts earlier
+            cfg.channel    = erf_cue_combined.label; % use the actual channels present in our data (i.e. ensure that rejected sensors are also removed here)
+            cfg.grid       = sourcemodel; % individual sourcemodel (warped from template grid)
+            [grid]    = ft_prepare_leadfield(cfg); % sourcemodel + leadfield
+
+
+            %% Step 4: LCMV beamformer
+            % http://www.fieldtriptoolbox.org/tutorial/salzburg
+            % http://www.fieldtriptoolbox.org/example/common_filters_in_beamforming
+
+            % Create common spatial filter (based on data across all conds),
+            % otherwise it would be circular (diff filters for diff conds, created based on each cond)
+        %{    
+            % first, compute the average erf (across 4 conds) for cue window & target window
+            erf_cue_combined = erf.cuechstay; % average erf for cue window
+            erf_cue_combined.avg = (erf.cuechstay.avg + erf.cuechswitch.avg + erf.cueenstay.avg + erf.cueenswitch.avg) / 4;
+            erf_target_combined = erf.targetchstay; % average erf for target window
+            erf_target_combined.avg = (erf.targetchstay.avg + erf.targetchswitch.avg + erf.targetenstay.avg + erf.targetenswitch.avg) / 4;
+        %}    
+            % run ft_sourceanalysis on the cue_combined erf & target_combined erf
+            % to create common spatial filters (1 filter for cue, 1 filter for target)
+            cfg                 = [];
+            cfg.keeptrials      = 'no';
+            cfg.channel         = 'MEG';
+            cfg.grad            = grads;
+            cfg.senstype        = 'MEG';
+            cfg.method          = 'lcmv';
+            cfg.grid            = grid; % individual sourcemodel + leadfield (warped from template grid)
+            cfg.grid.unit       = 'cm';
+            cfg.headmodel       = headmodel; % individual headmodel (from coreg)
+            cfg.lcmv.lamda      = '5%';
+            cfg.lcmv.fixedori   = 'yes';
+            cfg.lcmv.keepfilter = 'yes';
+            cfg.lcmv.projectmom = 'no';
+            cfg.lcmv.normalize  = 'yes'; %corrects for depth bias?
+            source_cue_combined = ft_sourceanalysis(cfg, erf_cue_combined); % create spatial filter for cue window
+            source_target_combined = ft_sourceanalysis(cfg, erf_target_combined); % create spatial filter for target window
+
+            % save
+            save(Beamformer_output_file, 'template_sourcemodel', 'sourcemodel', 'source_cue_combined', 'source_target_combined');
+        end
         
-        % Warp template grid into subject space
-        cfg                = [];
-        cfg.grid.warpmni   = 'yes';
-        cfg.grid.template  = template_sourcemodel; % standard sourcemodel
-        cfg.grid.nonlinear = 'yes';
-        cfg.mri            = mri; % individual mri
-        sourcemodel = ft_prepare_sourcemodel(cfg); % creates individual sourcemodel
-
-        % Plots for sanity checks
-        % plot headmodel, grid, and mri
-        %{        
-        ft_determine_coordsys(mri, 'interactive','no'); hold on
-        ft_plot_vol(headmodel);
-        ft_plot_mesh(sourcemodel.pos(sourcemodel.inside,:));
-        %}           
-        % plot headmodel, grid, and sensor locations
-        %{
-        figure;
-        ft_plot_sens(grads, 'style', '*b'); % plot the MEG sensor locations
-        ft_plot_vol(headmodel, 'edgecolor', 'cortex'); alpha 0.4; % plot the single shell (i.e. brain shape)
-        ft_plot_mesh(sourcemodel.pos(sourcemodel.inside,:)); % plot all vertices (ie. grid points) that are inside the brain
-        %}
-
-        % Create the leadfield
-        cfg            = [];
-        cfg.grad       = grads;
-        cfg.headmodel  = headmodel; % individual headmodel (from coreg)
-        cfg.reducerank = 2; % Should check this is appropriate - also check the rank of the data as we project out mouth artifacts earlier
-        cfg.channel    = erf_cue_combined.label; % use the actual channels present in our data (i.e. ensure that rejected sensors are also removed here)
-        cfg.grid       = sourcemodel; % individual sourcemodel
-        [grid]    = ft_prepare_leadfield(cfg); % sourcemodel + leadfield
-
-
-        %% Step 4: LCMV beamformer
-        % http://www.fieldtriptoolbox.org/tutorial/salzburg
-        % http://www.fieldtriptoolbox.org/example/common_filters_in_beamforming
-
-        % Create common spatial filter (based on data across all conds),
-        % otherwise it would be circular (diff filters for diff conds, created based on each cond)
-    %{    
-        % first, compute the average erf (across 4 conds) for cue window & target window
-        erf_cue_combined = erf.cuechstay; % average erf for cue window
-        erf_cue_combined.avg = (erf.cuechstay.avg + erf.cuechswitch.avg + erf.cueenstay.avg + erf.cueenswitch.avg) / 4;
-        erf_target_combined = erf.targetchstay; % average erf for target window
-        erf_target_combined.avg = (erf.targetchstay.avg + erf.targetchswitch.avg + erf.targetenstay.avg + erf.targetenswitch.avg) / 4;
-    %}    
-        % run ft_sourceanalysis on the cue_combined erf & target_combined erf
-        % to create common spatial filters (1 filter for cue, 1 filter for target)
-        cfg                 = [];
-        cfg.keeptrials      = 'no';
-        cfg.channel         = 'MEG';
-        cfg.grad            = grads;
-        cfg.senstype        = 'MEG';
-        cfg.method          = 'lcmv';
-        cfg.grid            = grid; % sourcemodel + leadfield
-        cfg.grid.unit       = 'cm';
-        cfg.headmodel       = headmodel; % individual headmodel (from coreg)
-        cfg.lcmv.lamda      = '5%';
-        cfg.lcmv.fixedori   = 'yes';
-        cfg.lcmv.keepfilter = 'yes';
-        cfg.lcmv.projectmom = 'no';
-        cfg.lcmv.normalize  = 'yes'; %corrects for depth bias?
-        source_cue_combined = ft_sourceanalysis(cfg, erf_cue_combined); % create spatial filter for cue window
-        source_target_combined = ft_sourceanalysis(cfg, erf_target_combined); % create spatial filter for target window
-
-        
+                    
         %% Step 5: Source localisation (of sensor-space effects)
         % Note: ft_sourceanalysis is only for localisation (no time dimension, only creates a source image showing where in the 3d space is one cond different from another cond)
         
         if RUN_SOURCE_LOCALISATION
+            % load required files
+            temp = load(Beamformer_output_file);
+            template_sourcemodel = temp.template_sourcemodel;
+            source_cue_combined = temp.source_cue_combined;
+            source_target_combined = temp.source_target_combined;
+            
             
             % time window to avg over (determined from sensor-space analysis)
             cue_ttype_window = [0.435 0.535];
@@ -301,7 +317,14 @@ function source_v1
         % Here we use the atlas to create VEs (virtual sensors) - 1 VE represents 1 ROI
 
         if RUN_ROI_ANALYSIS
-
+            % load required files
+            temp = load(Beamformer_output_file);
+            template_sourcemodel = temp.template_sourcemodel;
+            sourcemodel = temp.sourcemodel;
+            source_cue_combined = temp.source_cue_combined;
+            source_target_combined = temp.source_target_combined;
+            
+            
             % Load Atlas (contains parcellation of brain into regions/tissues/parcels)
             atlas = ft_read_atlas(fullfile(templates_dir, 'ROI_MNI_V4.nii'));
             atlas = ft_convert_units(atlas, 'cm');% ensure that atlas and template_sourcemodel are expressed in the same units
@@ -442,55 +465,88 @@ function source_v1
         end
     end
 
-%TODO: run this section & DL xjview to view blob
-
-    % Statistical analysis for Step 5 (Source localisation)
-    % Q: do we actually do any stats?? see tutorial link...
     
+    %% Grand average for Step 5 (Source localisation)
+    % Q: do we actually do any stats here?
+    % A: no, because we have already done the stats at sensor level, now we
+    % just want to know where (in source space) the already-discovered effect occurs
+    
+    % get the list of contrasts we are examining (based on saved folder structure)
     contrasts = listFolders(ResultsFolder_Source);
     
     % each cycle processes one contrast (e.g. cue_ttype, target_lang)
     for index = 1:length(contrasts)
-        % read in the blob for each subject (all in common space) from ResultsFolder_Source
+        % read in the saved blob for each subject (all in common space)
         blobs_folder = [ResultsFolder_Source cell2mat(contrasts(index)) '\\'];
-        blobs_files = dir([blobs_folder '*.mat']);
-        
+        blobs_files = dir([blobs_folder 'M*.mat']);        
         for subject = 1:length(blobs_files)
             temp = load([blobs_folder blobs_files(subject).name]);
-            blobs{subject} = temp.source_int;
+            blobs(subject) = temp.source_int;
+            %blobs{subject} = temp.sourceDiff; % use this option if using z-scores
         end
         
         % average the blob across all subjects
-        cfg = [];
-        cfg.parameter = 'pow';
-        [grandave] = ft_sourcegrandaverage(cfg, blobs{:});
+        grandave = blobs(1);
+        %grandave.pow = median([blobs.pow], 2); % use median   
+        %save_filename = [blobs_folder 'average_blob--median'];
+        grandave.pow = trimmean([blobs.pow], 12.5, 2); % use robust mean (removing top 1 & bottom 1 subject)      
+        save_filename = [blobs_folder 'average_blob--trimmean'];
         
-        save_filename = [blobs_folder 'average_blob'];
+        % only retain vertices in the top 25%, set the rest to 0 (only need this step if the intensity threshold in xjview GUI doesn't seem to correspond with the actual intensity scale)
+        threshold = quantile(grandave.pow, 0.75);
+        grandave.pow(grandave.pow < threshold) = 0;
+        
+        % average the blob (z-scores) across all subjects
+        %{
+        cfg = [];
+        cfg.parameter = 'zscores';
+        [grandave] = ft_sourcegrandaverage(cfg, blobs{:});
+        %}
+        
+        grandave = rmfield(grandave, 'cfg'); % useless field taking >2Gb space
         save(save_filename, 'grandave', '-v7.3');
+        
+        % smear onto mri overlay (can be diff resolution)
+        %{
+        cfg_source              = [];
+        cfg_source.voxelcoord   = 'no';
+        cfg_source.parameter    = 'zscores';
+        cfg_source.interpmethod = 'nearest';
+        source_GA_int              = ft_sourceinterpolate(cfg_source, grandave, template_mri);
+        save([save_filename '_interpo'], 'source_GA_int', '-v7.3');
+        %}
         
         % export averaged blob to NifTi format, then use xjview to read out 
         % what brain regions the averaged blob contains
+        % (set "intensity" threshold to 2 / 2.5 / 3 (for z-scores), 
+        % then press "report" & see console output)
         cfg           = [];
         cfg.filetype  = 'nifti';
         cfg.filename  = save_filename;
-        cfg.parameter = 'pow';
+        cfg.parameter = 'pow'; %'zscores'
         ft_sourcewrite(cfg, grandave);
     end
     
-    % Alternative way to read out the anatomical label of a blob (for each indi subject), 
-    % by looking up an atlas during ft_sourceplot:
+    % Alternative ways to read out the anatomical label of a blob: 
+    % (1) by looking up an atlas during ft_sourceplot:
     % http://www.fieldtriptoolbox.org/tutorial/aarhus/beamformingerf
-    % Doesn't work: (see error below - can't get the conversion Nifti_SPM <-> MNI working)
+    % Doesn't work: (see error below - can't get the Nifti_SPM <-> MNI conversion working)
     %Error using ft_sourceplot:
     %coordinate systems do not match (template mri in Nifti_SPM coords, atlas in MNI coords)
-
+    %
+    % (2) use ft_volumelookup:
+    % http://www.fieldtriptoolbox.org/faq/how_can_i_determine_the_anatomical_label_of_a_source
+    
+%%
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % SUBFUNCTIONS for source localisation
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     % calc the difference btwn 2 conditions at all source vertices,
-    % see where the effect is strongest
+    % so that we can see where in the brain the difference is largest;
+    % can also calc z-scores instead of actual power (i.e. which brain region 
+    % shows an effect which is much larger than the rest of the brain).
     %
     % @param cond1, cond2: source result for each cond, as obtained from ft_sourceanalysis
     % @param template_mri: for interpolation into common space
@@ -501,39 +557,45 @@ function source_v1
         sourceDiff         = cond2;
         sourceDiff.avg.pow = (cond2.avg.pow - cond1.avg.pow) ./ cond1.avg.pow;
 
-        % replace subject grid with MNI grid
+        % replace subject grid with MNI grid (no need to warp, 
+        % because the subject-space grid points already have a direct
+        % 1-to-1 mapping onto the template grid points)
         sourceDiff.pos = template_sourcemodel.pos;
 
-        % Smear the point solution into an MRI overlay (ie. warp the blob into common space)
+        % calc z-scores for all vertices
+        %{
+        x = sourceDiff.avg.pow; % make a shorthand
+        sourceDiff.zscores = (x - nanmean(x)) / nanstd(x);
+        save([save_filename '_zscores'], 'sourceDiff');
+        %}        
+        
+        % Smear the point solution into an MRI overlay
+        % This step does not do any warping; it just adds an mri overlay onto the plot & increases the grid resolution to match template mri (1mm)
+        % Q: should we interpolate the blob directly onto template mri, or interpolate onto individual mri first then volumenormalise?
+        % A: directly onto template mri, because the subject-space grid points already have a direct 1-to-1 mapping onto the template grid points.
         cfg_source              = [];
         cfg_source.voxelcoord   = 'no';
         cfg_source.parameter    = 'pow';
         cfg_source.interpmethod = 'nearest';
         source_int              = ft_sourceinterpolate(cfg_source, sourceDiff, template_mri);
 
-        % Finally, we can plot the result using ft_sourceplot
+        save(save_filename, 'source_int'); 
+
+        
+        % Plot the result using ft_sourceplot
         %{
         cfg_source              = [];
         %cfg_source.atlas        = fullfile(templates_dir, 'ROI_MNI_V4.nii'); % for looking up the anatomical label
                                                                       % of the source identified
                                                                       % coordsys = 'mni'
         cfg_source.method       = 'ortho';
-        cfg_source.funparameter = 'pow';
+        cfg_source.funparameter = 'zscores';
         %cfg_source.funcolorlim  = [-0.1 0.1]; % Do this programmatically
         cfg_source.opacitylim   = 'zeromax';
         %cfg_source.location     = [64 -32 8];
         cfg_source.funcolormap  = 'jet';
         ft_sourceplot(cfg_source, source_int);
         %}
-        
-        save(save_filename, 'source_int');
-
-        % Export to nifti format
-        cfg_source           = [];
-        cfg_source.filetype  = 'nifti';
-        cfg_source.filename  = save_filename;
-        cfg_source.parameter = 'pow';
-        ft_sourcewrite(cfg_source, source_int);
     end
     
     

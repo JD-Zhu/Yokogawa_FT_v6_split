@@ -6,7 +6,7 @@ clear all;
 % Please adjust as required:
 
 % perform channel repair on each subject's ERF?
-channelrepair = false; % only need to do the repair once, we'll save repaired erf in the folder below
+CHANNEL_REPAIR = false; % only need to do the repair once, we'll save repaired erf in the folder below
 repaired_erf_folder = 'channelrepaired\\'; % need to create this folder first
 
 
@@ -46,7 +46,7 @@ for i = 1:length(files)
         
     for j = 1:length(eventnames_8) % 4 conditions in cue & 4 conditions in target (total 8)
         % perform channel repair if needed
-        if (channelrepair == true)
+        if (CHANNEL_REPAIR == true)
             load([ResultsFolder 'neighbours.mat']);
             load([ResultsFolder 'all_labels.mat']);
             erf_clean.(eventnames_8{j}) = repair_bad_channels(erf_clean.(eventnames_8{j}), neighbours, all_labels);
@@ -56,7 +56,7 @@ for i = 1:length(files)
     end
     
     % save the new erf after channel repair
-    if (channelrepair == true)
+    if (CHANNEL_REPAIR == true)
         save([ResultsFolder repaired_erf_folder files(i).name], 'SubjectFolder', 'erf_clean');
     end
 end
