@@ -9,6 +9,9 @@ clear all;
 CHANNEL_REPAIR = false; % only need to do the repair once, we'll save repaired erf in the folder below
 repaired_erf_folder = 'channelrepaired\\'; % need to create this folder first
 
+% cfg.avgovertime setting in cluster-based permutation test
+AVGOVERTIME = false;
+
 
 %%
 % run the #define section
@@ -77,7 +80,7 @@ for j = 1:length(eventnames_8)
     % "{:}" means to use data from all elements of the variable
 end
 
-%save([ResultsFolder 'GA_erf_allConditions.mat'], 'GA_erf');
+save([ResultsFolder 'GA_erf_allConditions.mat'], 'GA_erf');
 
 % multiplot
 %{
@@ -147,24 +150,30 @@ fprintf('\n= STATS: CLUSTER-BASED PERMUTATION TESTS =\n');
 
 cfg = [];
 cfg.channel = {'all', '-AG083', '-AG087', '-AG088', '-AG082', '-AG084', '-AG086'}; % {'MEG'};
-cfg.latency = [0 0.75]; % time interval over which the experimental 
-                     % conditions must be compared (in seconds)
-latency_cue = [0.408 0.683];%[0.385 0.585];%[0.4 0.6];%[0.425 0.55]; % time window for cue-locked effect
-latency_target = [0.2 0.3];%[0.22 0.32];%[0.25 0.3]; % time window for target-locked effect 
-                            % tried [0.15 0.3], [0.2 0.25], [0.2 0.4]. Not sig.
-
 load([ResultsFolder 'neighbours.mat']); % this is the sensor layout - it's the same for all subjects (even same across experiments). So just prepare once & save, then load here
 cfg.neighbours = neighbours;  % same as defined for the between-trials experiment
 
-cfg.avgovertime = 'yes'; % if yes, this will average over the entire time window chosen in cfg.latency 
-                        % (useful when you want to look at a particular component, e.g. to look at M100,
-                        % cfg.latency = [0.08 0.12]; cfg.avgovertime = 'yes'; )
+% can choose diff time windows to analyse for cue epochs & target epochs
+% (these will be fed into cfg.latency accordingly)
+if (AVGOVERTIME)
+    latency_cue = [0.408 0.683];%[0.385 0.585];%[0.4 0.6];%[0.425 0.55]; % time window for cue-locked effect
+    latency_target = [0.2 0.3];%[0.22 0.32];%[0.25 0.3]; % time window for target-locked effect 
+                                % tried [0.15 0.3], [0.2 0.25], [0.2 0.4]. Not sig.
+    cfg.avgovertime = 'yes'; % if yes, this will average over the entire time window chosen in cfg.latency 
+                            % (useful when you want to look at a particular component, e.g. to look at M100,
+                            % cfg.latency = [0.08 0.12]; cfg.avgovertime = 'yes'; )
+else % autoly detect temporal cluster
+    latency_cue = [0 0.75]; % time interval over which the experimental 
+    latency_target = [0 0.75]; %conditions must be compared (in seconds)
+    cfg.avgovertime = 'no';
+end
+
 cfg.method = 'montecarlo';
 cfg.statistic = 'depsamplesT'; %cfg.statistic = 'ft_statfun_indepsamplesT'; OR 'ft_statfun_depsamplesFmultivariate';
 cfg.correctm = 'cluster'; %'no'; % its common in MEG studies to run uncorrected at cfg.alpha = 0.001
 cfg.clusteralpha = 0.05; % threshold for selecting candidate samples to form clusters
 cfg.clusterstatistic = 'maxsum';
-cfg.minnbchan = 3; % minimum number of neighbourhood channels required to be significant 
+cfg.minnbchan = 2; % minimum number of neighbourhood channels required to be significant 
                    % in order to form a cluster 
                    % (default: 0, ie. each single channel can be considered a cluster).
                    % 4 or 5 is a good choice; 2 is too few coz it's even below
@@ -172,7 +181,7 @@ cfg.minnbchan = 3; % minimum number of neighbourhood channels required to be sig
 
 cfg.tail = 0;
 cfg.clustertail = 0; % 2 tailed test
-cfg.alpha = 0.1; %0.001  % threshold for cluster-level statistics (any cluster with a p-value lower than this will be reported as sig - an entry of '1' in .mask field)
+cfg.alpha = 0.05; %0.001  % threshold for cluster-level statistics (any cluster with a p-value lower than this will be reported as sig - an entry of '1' in .mask field)
 cfg.correcttail = 'prob'; % correct for 2-tailedness
 cfg.numrandomization = 1000; % Rule of thumb: use 500, and double this number if it turns out 
     % that the p-value differs from the chosen alpha (e.g. 0.05) by less than 0.02
@@ -267,7 +276,7 @@ effect_target_interaction = length(find(target_interaction.mask))
 effect_target_lang = length(find(target_lang.mask))
 effect_target_ttype = length(find(target_ttype.mask))
 
-%save([ResultsFolder 'stats.mat'], 'cue_interaction', 'cue_lang', 'cue_ttype', 'target_interaction', 'target_lang', 'target_ttype');
+save([ResultsFolder 'stats.mat'], 'cue_interaction', 'cue_lang', 'cue_ttype', 'target_interaction', 'target_lang', 'target_ttype');
 
 
 %% Plotting: use ft_clusterplot & ft_topoplot
@@ -290,9 +299,13 @@ cfg = [];
 %cfg.zlim = [-5 5]; % set scaling (range of t-values) (usually using automatic is ok) 
 cfg.highlightcolorpos = [1 1 1]; % white for pos clusters
 cfg.highlightcolorneg = [255/255 192/255 203/255]; % pink for neg clusters
-cfg.alpha = 0.1; % any clusters with a p-value below this threshold will be plotted
-%cfg.colorbar = 'yes'; % shows the scaling
+cfg.alpha = 0.05; % any clusters with a p-value below this threshold will be plotted
 cfg.layout = lay;
+
+% turn on the following 2 lines if you are after one particular subplot
+cfg.subplotsize = [1 1];
+cfg.colorbar = 'yes'; % shows the scaling
+
 ft_clusterplot(cfg, stat);
 
 
