@@ -301,8 +301,12 @@ cfg.highlightcolorpos = [1 1 1]; % white for pos clusters
 cfg.highlightcolorneg = [255/255 192/255 203/255]; % pink for neg clusters
 cfg.alpha = 0.05; % any clusters with a p-value below this threshold will be plotted
 cfg.layout = lay;
+% use a nice-looking colourmap
+ft_hastoolbox('brewermap', 1); % ensure this toolbox is on the path
+colours = colormap(flipud(brewermap(64, 'RdBu')));
+cfg.colormap = colours;
 
-% turn on the following 2 lines if you are after one particular subplot
+% turn on the following lines if you are after one particular subplot
 cfg.subplotsize = [1 1];
 cfg.colorbar = 'yes'; % shows the scaling
 
