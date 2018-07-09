@@ -23,6 +23,7 @@ cfg.layout            = lay;
 cfg.colormap          = colours;
 cfg.colorbar          = 'yes'; % shows the scales
 %cfg.colorbar         = 'EastOutside';
+cfg.zlim              = [-4 4];%'maxabs'; % set the scaling
 
 cfg.xlim = [0.425 0.550]; % duration of the effect (as reported by ft_clusterplot)
                           % topography will be averaged over this interval
@@ -43,3 +44,4 @@ cfg.parameter = 'stat'; % what field (in the stats output) to plot, e.g. selecti
 
 figure; ft_topoplotER(cfg, stat);
 set(gca,'fontsize',22); % set colorbar fontsize
+%title(gca, 'T-values');
