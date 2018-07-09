@@ -15,13 +15,10 @@ AVGOVERTIME = false;
 
 %%
 % run the #define section
-global conds_cue; global conds_target; global eventnames;
+global conds_cue; global conds_target; global eventnames_8;
 global ResultsFolder; % all subjects' erf data are stored here
 global filename_suffix; % erf results file suffix
 common();
-
-% remove the 'response' event type, leaving us with 8 actual event types
-eventnames_8 = eventnames(1:8);
 
 
 % initialise allSubjects_erf (each field holds all subjects' erf in that condition)

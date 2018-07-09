@@ -47,7 +47,7 @@ function plot_ERF (erf, erf_clean, lay, plot_uncleaned)
     legend(eventnames(conds_target));
 
 
-    %% Calc global averages across all sensors (GFP = global field potentials)
+    %% Calc global averages across all sensors (GFP = global field power)
     cfg        = [];
     cfg.method = 'power';
     for j = 1:length(eventnames)

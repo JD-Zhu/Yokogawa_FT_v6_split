@@ -22,9 +22,10 @@ clc
 % = Settings =
 % Please adjust as required:
 
-CHANNEL_REPAIR = true; % repair bad/rejected channels?
+CHANNEL_REPAIR = false; % repair bad/rejected channels?
 CALC_UNCLEANED_ERF = false; % calculate uncleaned erf? (for quality check of response-component rejection)
 
+REMOVE_TRIGGER_ARTEFACT = true; % remove trigger-leak artefact? (spike around 55ms before cue onset & target onset)
 
 
 %%
@@ -95,8 +96,10 @@ for k = 1:length(SubjectIDs)
         
         events_allBlocks = exclude_beh_errors(SubjectID, events_allBlocks);
 
+        % remove mouth movement artefact by extracting main components from the "response" epochs
+        % and projecting these out of all trials
         load([ResultsFolder 'lay.mat']);
-        [all_blocks_clean, response_comp] = reject_response_component(all_blocks, events_allBlocks, lay);
+        [all_blocks_clean, response_comp] = remove_artefact_ICA(all_blocks, events_allBlocks, lay, 'response');
         
         
         % === Reject Outlier Trials ===
@@ -138,6 +141,14 @@ for i = 1:length(SubjectIDs)
 
         load([SubjectFolder S1_output_filename]); % to load 'all_blocks'
         load([SubjectFolder S2_output_filename]);
+
+        
+        % remove trigger-leak artefact (if needed)
+        if (REMOVE_TRIGGER_ARTEFACT)
+            load([ResultsFolder 'lay.mat']);
+            [all_blocks_clean, trigger_comp] = remove_artefact_ICA(all_blocks_clean, events_allBlocks, lay, 'trigger');
+        end
+
         
         % perform channel repair if needed
         if (CHANNEL_REPAIR)

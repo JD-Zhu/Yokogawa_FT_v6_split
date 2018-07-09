@@ -17,11 +17,13 @@ function [] = common()
     filename_suffix = ''; % '_noPCA'; %'_rejectTop3'; %'';
     
     % trigger events (DO NOT change the order of this list)
-    global eventcodes; global eventnames;
+    global eventcodes; global eventnames; global eventnames_8;
     eventcodes = {{'cuechstay'},{'17'};{'cuechswitch'},{'19'};{'cueenstay'},{'21'};{'cueenswitch'},{'23'}; ...
         {'targetchstay'},{'18'};{'targetchswitch'},{'20'};{'targetenstay'},{'22'};{'targetenswitch'},{'24'};{'response'},{'30'}};
     eventnames = eventcodes(:,1); % extract a list of all event names
     eventnames = [eventnames{:}]; % convert into strings
+    % remove the 'response' event type, leaving us with 8 actual event types
+    eventnames_8 = eventnames(1:8);
 
     % for ease of reference to the conditions in cue window & target window
     global conds_cue; global conds_target;
