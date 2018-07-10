@@ -4,10 +4,10 @@ function source_v1
     % Please adjust as required:
 
     % run the source localisation (of sensor effects)?
-    RUN_SOURCE_LOCALISATION = true;
+    RUN_SOURCE_LOCALISATION = false;
     
     % run the ROI analysis?
-    RUN_ROI_ANALYSIS = false;
+    RUN_ROI_ANALYSIS = true;
     
     % use which method ('svd' or 'centroid') for collapsing 
     % all vertices in an ROI into a single virtual sensor?
