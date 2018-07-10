@@ -476,71 +476,74 @@ function source_v1
     % A: no, because we have already done the stats at sensor level, now we
     % just want to know where (in source space) the already-discovered effect occurs
     
-    % get the list of contrasts we are examining (based on saved folder structure)
-    contrasts = listFolders(ResultsFolder_Source);
+    if RUN_SOURCE_LOCALISATION
     
-    % each cycle processes one contrast (e.g. cue_ttype, target_lang)
-    for index = 1:length(contrasts)
-        % read in the saved blob for each subject (all in common space)
-        blobs_folder = [ResultsFolder_Source cell2mat(contrasts(index)) '\\'];
-        blobs_files = dir([blobs_folder 'M*.mat']);        
-        for subject = 1:length(blobs_files)
-            temp = load([blobs_folder blobs_files(subject).name]);
-            blobs(subject) = temp.source_int;
-            %blobs{subject} = temp.sourceDiff; % use this option if using z-scores
+        % get the list of contrasts we are examining (based on saved folder structure)
+        contrasts = listFolders(ResultsFolder_Source);
+
+        % each cycle processes one contrast (e.g. cue_ttype, target_lang)
+        for index = 1:length(contrasts)
+            % read in the saved blob for each subject (all in common space)
+            blobs_folder = [ResultsFolder_Source cell2mat(contrasts(index)) '\\'];
+            blobs_files = dir([blobs_folder 'M*.mat']);        
+            for subject = 1:length(blobs_files)
+                temp = load([blobs_folder blobs_files(subject).name]);
+                blobs(subject) = temp.source_int;
+                %blobs{subject} = temp.sourceDiff; % use this option if using z-scores
+            end
+
+            % average the blob across all subjects
+            grandave = blobs(1);
+            %grandave.pow = median([blobs.pow], 2); % use median   
+            %save_filename = [blobs_folder 'average_blob--median'];
+            grandave.pow = trimmean([blobs.pow], 12.5, 2); % use robust mean (removing top 1 & bottom 1 subject)      
+            save_filename = [blobs_folder 'average_blob--trimmean'];
+
+            % only retain vertices in the top 25%, set the rest to 0 (only need this step if the intensity threshold in xjview GUI doesn't seem to correspond with the actual intensity scale)
+            threshold = quantile(grandave.pow, 0.75);
+            grandave.pow(grandave.pow < threshold) = 0;
+
+            % average the blob (z-scores) across all subjects
+            %{
+            cfg = [];
+            cfg.parameter = 'zscores';
+            [grandave] = ft_sourcegrandaverage(cfg, blobs{:});
+            %}
+
+            grandave = rmfield(grandave, 'cfg'); % useless field taking >2Gb space
+            save(save_filename, 'grandave', '-v7.3');
+
+            % smear onto mri overlay (can be diff resolution)
+            %{
+            cfg_source              = [];
+            cfg_source.voxelcoord   = 'no';
+            cfg_source.parameter    = 'zscores';
+            cfg_source.interpmethod = 'nearest';
+            source_GA_int              = ft_sourceinterpolate(cfg_source, grandave, template_mri);
+            save([save_filename '_interpo'], 'source_GA_int', '-v7.3');
+            %}
+
+            % export averaged blob to NifTi format, then use xjview to read out 
+            % what brain regions the averaged blob contains
+            % (set "intensity" threshold to 2 / 2.5 / 3 (for z-scores), 
+            % then press "report" & see console output)
+            cfg           = [];
+            cfg.filetype  = 'nifti';
+            cfg.filename  = save_filename;
+            cfg.parameter = 'pow'; %'zscores'
+            ft_sourcewrite(cfg, grandave);
         end
-        
-        % average the blob across all subjects
-        grandave = blobs(1);
-        %grandave.pow = median([blobs.pow], 2); % use median   
-        %save_filename = [blobs_folder 'average_blob--median'];
-        grandave.pow = trimmean([blobs.pow], 12.5, 2); % use robust mean (removing top 1 & bottom 1 subject)      
-        save_filename = [blobs_folder 'average_blob--trimmean'];
-        
-        % only retain vertices in the top 25%, set the rest to 0 (only need this step if the intensity threshold in xjview GUI doesn't seem to correspond with the actual intensity scale)
-        threshold = quantile(grandave.pow, 0.75);
-        grandave.pow(grandave.pow < threshold) = 0;
-        
-        % average the blob (z-scores) across all subjects
-        %{
-        cfg = [];
-        cfg.parameter = 'zscores';
-        [grandave] = ft_sourcegrandaverage(cfg, blobs{:});
-        %}
-        
-        grandave = rmfield(grandave, 'cfg'); % useless field taking >2Gb space
-        save(save_filename, 'grandave', '-v7.3');
-        
-        % smear onto mri overlay (can be diff resolution)
-        %{
-        cfg_source              = [];
-        cfg_source.voxelcoord   = 'no';
-        cfg_source.parameter    = 'zscores';
-        cfg_source.interpmethod = 'nearest';
-        source_GA_int              = ft_sourceinterpolate(cfg_source, grandave, template_mri);
-        save([save_filename '_interpo'], 'source_GA_int', '-v7.3');
-        %}
-        
-        % export averaged blob to NifTi format, then use xjview to read out 
-        % what brain regions the averaged blob contains
-        % (set "intensity" threshold to 2 / 2.5 / 3 (for z-scores), 
-        % then press "report" & see console output)
-        cfg           = [];
-        cfg.filetype  = 'nifti';
-        cfg.filename  = save_filename;
-        cfg.parameter = 'pow'; %'zscores'
-        ft_sourcewrite(cfg, grandave);
+
+        % Alternative ways to read out the anatomical label of a blob: 
+        % (1) by looking up an atlas during ft_sourceplot:
+        % http://www.fieldtriptoolbox.org/tutorial/aarhus/beamformingerf
+        % Doesn't work: (see error below - can't get the Nifti_SPM <-> MNI conversion working)
+        %Error using ft_sourceplot:
+        %coordinate systems do not match (template mri in Nifti_SPM coords, atlas in MNI coords)
+        %
+        % (2) use ft_volumelookup:
+        % http://www.fieldtriptoolbox.org/faq/how_can_i_determine_the_anatomical_label_of_a_source
     end
-    
-    % Alternative ways to read out the anatomical label of a blob: 
-    % (1) by looking up an atlas during ft_sourceplot:
-    % http://www.fieldtriptoolbox.org/tutorial/aarhus/beamformingerf
-    % Doesn't work: (see error below - can't get the Nifti_SPM <-> MNI conversion working)
-    %Error using ft_sourceplot:
-    %coordinate systems do not match (template mri in Nifti_SPM coords, atlas in MNI coords)
-    %
-    % (2) use ft_volumelookup:
-    % http://www.fieldtriptoolbox.org/faq/how_can_i_determine_the_anatomical_label_of_a_source
     
 %%
 
