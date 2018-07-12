@@ -6,7 +6,7 @@
 %
 function [data_clean, artefact_comp] = remove_artefact_ICA(data, events_allBlocks, lay, type_of_artefact)
     % run the #define section
-    global eventnames_8;
+    global eventnames_8; global conds_cue; 
     common();
 
     
@@ -14,18 +14,20 @@ function [data_clean, artefact_comp] = remove_artefact_ICA(data, events_allBlock
     
     % grab the relevant "trials" which characterise the artefact
     if strcmp(type_of_artefact, 'response')
-        % take all the "artefact" epochs
+        % take all the "response" epochs
         cfg        = [];
         cfg.trials = events_allBlocks.artefact; % list of "artefact" events
         artefact   = ft_redefinetrial(cfg, data);
         
     elseif strcmp(type_of_artefact, 'trigger')
-        % take all cue & target epochs (ie. not "artefact" epochs)
+        % take all the cue epochs
         % and extract the section containing the trigger artefact (-65 to -45ms)
-        for j = 1:length(eventnames_8)
+        eventnames_cue = eventnames_8(conds_cue);
+        %eventnames_cue = eventnames_8; % if you want to use both pre-cue & pre-target as definition of trigger artefact
+        for j = 1:length(eventnames_cue)
             cfg = [];
-            cfg.trials = events_allBlocks.(eventnames_8{j});
-            cfg.toilim = [-0.065 -0.045]; % -65 to -45ms
+            cfg.trials = events_allBlocks.(eventnames_cue{j});
+            cfg.toilim = [-0.065 -0.040]; % -65 to -45ms
             trials = ft_redefinetrial(cfg, data);
 
             % append to existing trials
@@ -66,6 +68,7 @@ function [data_clean, artefact_comp] = remove_artefact_ICA(data, events_allBlock
     cfg.viewmode = 'component';
     cfg.layout   = lay;
     %ft_databrowser(cfg, artefact_comp)
+    %drawnow; pause;
 
     % project certain components in the artefact erf out of all trials
     if strcmp(type_of_artefact, 'response')
@@ -75,7 +78,7 @@ function [data_clean, artefact_comp] = remove_artefact_ICA(data, events_allBlock
         %data_clean = data; % noPCA version: cleaned data is same as uncleaned data
     elseif strcmp(type_of_artefact, 'trigger')
         cfg              = [];
-        cfg.component    = 1:2; % project out the 1st principal component
+        cfg.component    = 1:1; % project out the 1st principal component
         data_clean = ft_rejectcomponent(cfg, artefact_comp, data); % reject these comps from all trials
     end    
 end

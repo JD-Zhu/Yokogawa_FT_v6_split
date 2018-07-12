@@ -16,7 +16,6 @@ v6: split whole script into 3 main stages of processing & each stage now loops t
 %%
 close all
 clear all % disable this line if u want breakpoints to work
-clc
 
 
 % = Settings =

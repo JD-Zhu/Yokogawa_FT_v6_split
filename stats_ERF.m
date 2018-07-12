@@ -80,7 +80,6 @@ end
 save([ResultsFolder 'GA_erf_allConditions.mat'], 'GA_erf');
 
 % multiplot
-%{
 load([ResultsFolder 'lay.mat']);
         
 cfg              = [];
@@ -99,7 +98,6 @@ legend(eventnames_8(conds_cue));
 figure('Name','ft_multiplotER: GA_erf.targetchstay, GA_erf.targetchsw, GA_erf.targetenstay, GA_erf.targetensw');
 ft_multiplotER(cfg, GA_erf.targetchstay, GA_erf.targetchswitch, GA_erf.targetenstay, GA_erf.targetenswitch);
 legend(eventnames_8(conds_target));
-%}
 
 
 % CALCULATE global averages across all sensors (i.e. GFP = global field power)
@@ -128,6 +126,7 @@ legend(eventnames_8(conds_target));
 
 
 % average across all 4 conds (for selecting windows for peaks)
+%{
 averageAcrossConds_cue = GA_erf_GFP.cuechstay;
 averageAcrossConds_cue.avg = (GA_erf_GFP.cuechstay.avg + GA_erf_GFP.cuechswitch.avg + GA_erf_GFP.cueenstay.avg + GA_erf_GFP.cueenswitch.avg) / 4;
 averageAcrossConds_target = GA_erf_GFP.targetchstay;
@@ -139,7 +138,7 @@ xlim([-0.2 0.75]);
 figure('Name','Average across all conds - target window'); 
 plot(averageAcrossConds_target.time, averageAcrossConds_target.avg); 
 xlim([-0.2 0.75]);
-
+%}
 
 %% Statistical analysis
 
@@ -160,8 +159,8 @@ if (AVGOVERTIME)
                             % (useful when you want to look at a particular component, e.g. to look at M100,
                             % cfg.latency = [0.08 0.12]; cfg.avgovertime = 'yes'; )
 else % autoly detect temporal cluster
-    latency_cue = [0 0.75]; % time interval over which the experimental 
-    latency_target = [0 0.75]; %conditions must be compared (in seconds)
+    latency_cue = [-0.2 0.75]; % time interval over which the experimental 
+    latency_target = [-0.2 0.75]; %conditions must be compared (in seconds)
     cfg.avgovertime = 'no';
 end
 
@@ -304,14 +303,14 @@ colours = colormap(flipud(brewermap(64, 'RdBu')));
 cfg.colormap = colours;
 
 % turn on the following lines if you are after one particular subplot
-cfg.subplotsize = [1 1];
-cfg.colorbar = 'yes'; % shows the scaling
+%cfg.subplotsize = [1 1];
+%cfg.colorbar = 'yes'; % shows the scaling
 
 ft_clusterplot(cfg, stat);
 
 
 %% ft_topoplot (based on actual erf amplitude) 
-
+%{
 % first, define the 2 conds to be compared (this time using cross-subject averages, i.e. GA)
 % here we look at main effect of ttype in cue window, so we collapse across langs
 GA_cue_stay = GA_erf.cuechstay;
@@ -402,6 +401,7 @@ for k = 1:length(j)-1; % create one subplot for each time interval
      cfg.layout = lay;
      ft_topoplotER(cfg, GA_cue_stayvsswitch);
 end  
+%}
 
 %% To plot the actual effect (i.e. average ERF of sig channels)
 % alt: go to the multiplotER generated earlier, manually select the sig channels & plot

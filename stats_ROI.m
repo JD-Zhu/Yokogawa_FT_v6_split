@@ -17,12 +17,9 @@
 clear all;
 
 % run the #define section
-global conds_cue; global conds_target; global eventnames;
+global conds_cue; global conds_target; global eventnames_8;
 global ResultsFolder_ROI; % all subjects' ROI data are stored here
 common();
-
-% remove the 'response' event type, leaving us with 8 actual event types
-eventnames_8 = eventnames(1:8);
 
 
 %% Read data
@@ -86,6 +83,7 @@ for k = 1:length(ROIs_label)
     for j = conds_cue
         plot(GA_erf.(eventnames_8{j}).time, GA_erf.(eventnames_8{j}).avg);
     end
+    xlim([-0.2 0.75]);
     legend(eventnames_8(conds_cue));
 
     % target-locked 
@@ -93,6 +91,7 @@ for k = 1:length(ROIs_label)
     for j = conds_target
         plot(GA_erf.(eventnames_8{j}).time, GA_erf.(eventnames_8{j}).avg);
     end
+    xlim([-0.2 0.75]);
     legend(eventnames_8(conds_target));
     %}
 end
@@ -117,11 +116,8 @@ for k = 1:length(ROIs_label)
     cfg.channel = {'all'}; % there is only one channel (i.e. the virtual sensor for this ROI)
     cfg.avgoverchan = 'yes'; % this is necessary (or else FT will ask for cfg.neighbours)
     
-    cfg.latency = [0 0.75]; % time interval over which the experimental 
+    cfg.latency = [-0.2 0.75]; % time interval over which the experimental 
                          % conditions must be compared (in seconds)
-    %latency_cue = [0.385 0.585];%[0.4 0.6];%[0.425 0.55]; % time window for cue-locked effect
-    %latency_target = [0.22 0.32];%[0.2 0.3];%[0.25 0.3]; % time window for target-locked effect 
-                                % tried [0.2 0.4], not sig
     cfg.avgovertime = 'no'; % if yes, this will average over the entire time window chosen in cfg.latency 
                             % (useful when you want to look at a particular component, e.g. to look at M100,
                             % cfg.latency = [0.08 0.12]; cfg.avgovertime = 'yes'; )

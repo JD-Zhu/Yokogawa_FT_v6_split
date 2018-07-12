@@ -22,11 +22,10 @@ function [] = common()
         {'targetchstay'},{'18'};{'targetchswitch'},{'20'};{'targetenstay'},{'22'};{'targetenswitch'},{'24'};{'response'},{'30'}};
     eventnames = eventcodes(:,1); % extract a list of all event names
     eventnames = [eventnames{:}]; % convert into strings
-    % remove the 'response' event type, leaving us with 8 actual event types
-    eventnames_8 = eventnames(1:8);
-
+    
     % for ease of reference to the conditions in cue window & target window
     global conds_cue; global conds_target;
     conds_cue = 1:4;
     conds_target = 5:8;
+    eventnames_8 = eventnames([conds_cue conds_target]); % 8 actual event types
 end

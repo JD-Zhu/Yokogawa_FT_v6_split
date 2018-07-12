@@ -14,6 +14,16 @@ function source_v1
     VE_METHOD = 'svd';
 
     
+    % = Save files =
+    
+    % filename for saving the beamformer output (to avoid running the whole thing every time)
+    Beamformer_output_file = 'beamformer_5_TriggerArtefact-rejectTop2.mat'; 
+    % To save a different version of beamformer results (e.g. when using 
+    % a new set of ERF outputs), simply change this filename.
+    % Similarly, to load a previous version of beamformer results,
+    % change this filename accordingly.
+
+    
     %%
     % NOTE: always run from the "analysis_scripts" folder, to ensure all relative
     % paths work as expected
@@ -35,12 +45,6 @@ function source_v1
                                            % (consistent path across computers), I've stored a copy here.                                  
     MRI_folder = [pwd '\\..\\..\\..\\..\\MRI_databases\\HCP\\']; % location of your MRI database 
                                                                  % (consistent relative path across computers)                                                                                                                                  
-    Beamformer_output_file = 'beamformer_5_TriggerArtefact-rejectTop2.mat'; % filename for saving the beamformer output (to avoid running the whole thing every time)
-                                               % To save a different version of beamformer results
-                                               % (e.g. when using a new set of ERF outputs), 
-                                               % simply change this filename.
-                                               % Similarly, to load a previous version of beamformer results,
-                                               % change this filename accordingly
     SubjectFolders = listFolders(DataFolder);
 
 
