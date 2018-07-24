@@ -221,7 +221,7 @@ for i = 1:length(stats_names) % each cycle handles one effect (e.g. cue_lang)
                 figure('Name', [stat_name ' in ' ROI_name]); hold on
                 for j = conds_cue
                     plot(GA.(ROI_name).(eventnames_8{j}).time, GA.(ROI_name).(eventnames_8{j}).avg);
-                    xlim([-0.2 0.75]); 
+                    xlim([-0.2 1]); 
                 end
                 line([start_time start_time], ylim, 'Color','black'); % plot a vertical line at start_time
                 line([end_time end_time], ylim, 'Color','black'); % plot a vertical line at end_time
@@ -235,7 +235,7 @@ for i = 1:length(stats_names) % each cycle handles one effect (e.g. cue_lang)
                 figure('Name', [stat_name ' in ' ROI_name]); hold on
                 for j = conds_target
                     plot(GA.(ROI_name).(eventnames_8{j}).time, GA.(ROI_name).(eventnames_8{j}).avg);
-                    xlim([-0.2 0.75]); 
+                    xlim([-0.2 1]); 
                 end
                 line([start_time start_time], ylim, 'Color','black'); % plot a vertical line at start_time
                 line([end_time end_time], ylim, 'Color','black'); % plot a vertical line at end_time

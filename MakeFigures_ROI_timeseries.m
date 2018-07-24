@@ -27,7 +27,6 @@ plot(sw.time, sw.avg, 'LineWidth',3);
 xlim([-0.2 0.75]);
 xlabel('seconds');
 set(gca, 'LineWidth',1.5, 'FontSize',22); % set axes properties
-legend({'Stay', 'Switch'}, 'Location','northwest', 'FontSize',22);
 box on; % draw a border around the figure
 
 % create shaded region indicating effect duration
@@ -36,6 +35,8 @@ x = [start_time end_time end_time start_time]; % specify x,y coordinates of the 
 y = [ylow ylow yhigh yhigh];
 patch(x,y,'black', 'FaceAlpha',0.15) % draw the shade (FaceAlpha is transparency)
 ylim(ylimits); % ensure ylim doesn't get expanded
+
+legend({'Stay', 'Switch'}, 'Location','northwest', 'FontSize',22);
 hold off;
 
 
@@ -58,10 +59,9 @@ ch = ft_timelockbaseline(cfg, ch);
 figure('Name', 'cue_lang_RACC_705-745ms'); hold on;
 plot(en.time, en.avg, 'LineWidth',3);
 plot(ch.time, ch.avg, 'LineWidth',3);
-xlim([-0.2 0.75]);
+xlim([-0.2 1]);
 xlabel('seconds');
 set(gca, 'LineWidth',1.5, 'FontSize',22); % set axes properties
-legend({'L2', 'L1'}, 'Location','northwest' ,'FontSize',22);
 box on; % draw a border around the figure
 
 % create shaded region indicating effect duration
@@ -70,6 +70,9 @@ x = [start_time end_time end_time start_time]; % specify x,y coordinates of the 
 y = [ylow ylow yhigh yhigh];
 patch(x,y,'black', 'FaceAlpha',0.15) % draw the shade (FaceAlpha is transparency)
 ylim(ylimits); % ensure ylim doesn't get expanded
+
+xticks([-0.2 0 0.2 0.4 0.6 0.8 1])
+legend({'L2', 'L1'}, 'Location','northwest' ,'FontSize',22);
 hold off;
 
 
