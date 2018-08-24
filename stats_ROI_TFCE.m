@@ -77,11 +77,6 @@ function stats_ROI_TFCE()
 
     fprintf('\n= STATS: Threshold-free cluster enhancement (TFCE method) =\n');
 
-    % create dummy channel locations variable (not used for ROI data, just to remain compatible with
-    % stats_ERF_TFCE.m, so they can share the same myWrapper_ept_TFCE function)
-    chanlocs = [];
-
-    
     % each cycle processes one ROI
     for k = 1:length(ROIs_label)
 
@@ -95,26 +90,26 @@ function stats_ROI_TFCE()
         % Interaction (i.e. calc sw$ in each lang, then submit the 2 sw$ for comparison)
         fprintf('\nCUE window -> Testing lang x ttype interaction:\n');
         [timelock1, timelock2] = combine_conds_for_T_test('eeglab', 'interaction', data.cuechstay, data.cuechswitch, data.cueenstay, data.cueenswitch);
-        [cue_interaction.(ROI_name)] = myWrapper_ept_TFCE(timelock1, timelock2, chanlocs);
+        [cue_interaction.(ROI_name)] = myWrapper_ept_TFCE(timelock1, timelock2);
         fprintf('\nTARGET window -> Testing lang x ttype interaction:\n');
         [timelock1, timelock2] = combine_conds_for_T_test('eeglab', 'interaction', data.targetchstay, data.targetchswitch, data.targetenstay, data.targetenswitch); %'2-1 vs 4-3');
-        [target_interaction.(ROI_name)] = myWrapper_ept_TFCE(timelock1, timelock2, chanlocs);
+        [target_interaction.(ROI_name)] = myWrapper_ept_TFCE(timelock1, timelock2);
     
         % Main effect of lang (collapse across stay-switch)
         fprintf('\nCUE window -> Main effect of lang:\n');
         [timelock1, timelock2] = combine_conds_for_T_test('eeglab', 'main_12vs34', data.cuechstay, data.cuechswitch, data.cueenstay, data.cueenswitch);
-        [cue_lang.(ROI_name)] = myWrapper_ept_TFCE(timelock1, timelock2, chanlocs);
+        [cue_lang.(ROI_name)] = myWrapper_ept_TFCE(timelock1, timelock2);
         fprintf('\nTARGET window -> Main effect of lang:\n');
         [timelock1, timelock2] = combine_conds_for_T_test('eeglab', 'main_12vs34', data.targetchstay, data.targetchswitch, data.targetenstay, data.targetenswitch); %'2-1 vs 4-3');
-        [target_lang.(ROI_name)] = myWrapper_ept_TFCE(timelock1, timelock2, chanlocs);
+        [target_lang.(ROI_name)] = myWrapper_ept_TFCE(timelock1, timelock2);
 
         % Main effect of switch (collapse across langs)
         fprintf('\nCUE window -> Main effect of ttype:\n');
         [timelock1, timelock2] = combine_conds_for_T_test('eeglab', 'main_13vs24', data.cuechstay, data.cuechswitch, data.cueenstay, data.cueenswitch);
-        [cue_ttype.(ROI_name)] = myWrapper_ept_TFCE(timelock1, timelock2, chanlocs);
+        [cue_ttype.(ROI_name)] = myWrapper_ept_TFCE(timelock1, timelock2);
         fprintf('\nTARGET window -> Main effect of ttype:\n');
         [timelock1, timelock2] = combine_conds_for_T_test('eeglab', 'main_13vs24', data.targetchstay, data.targetchswitch, data.targetenstay, data.targetenswitch); %'2-1 vs 4-3');
-        [target_ttype.(ROI_name)] = myWrapper_ept_TFCE(timelock1, timelock2, chanlocs);
+        [target_ttype.(ROI_name)] = myWrapper_ept_TFCE(timelock1, timelock2);
 
     end
     
@@ -182,40 +177,6 @@ function stats_ROI_TFCE()
                 %fprintf('%s: No effect in %s\n', stat_name, ROI_name);
             end
         end
-    end
-
-    %%
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % SUBFUNCTIONS
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-    % wrapper function for calling ept_TFCE(), so that settings only need to be changed in one place
-    function Results = myWrapper_ept_TFCE(data1, data2, chanlocs)
-        
-        % the input format to TFCE requires a "channel" dimension, so we check this
-        % https://github.com/Mensen/ept_TFCE-matlab/issues/21
-        if (size(data1, 2) == 1) % if there is only 1 channel (e.g. ROI result),
-                                 % we fake a 2nd channel by making a copy of the 1st channel
-            data1 = repmat(data1, [1,2,1]);
-            data2 = repmat(data2, [1,2,1]);
-            
-            % we also need to treat this data as time-frequency data (so that TFCE won't look for a channel locations file)
-            flag_ft = true;
-            chanlocs = [];
-            
-        else % for normal (multi channel) data
-            flag_ft = false;
-        end       
-        
-        Results = ept_TFCE(data1, data2, ...
-            chanlocs, ...
-            'type', 'd', ...
-            'flag_ft', flag_ft, ...
-            'flag_tfce', true, ...
-            'nPerm', 2000, ...
-            'rSample', 200, ...
-            'flag_save', false);
-            %'saveName', [ResultsFolder 'TFCE_temp\\ept_' ROI_name '.mat']); % set a location to temporarily store the output. we don't need to save it, but if you don't set a location, it will litter arond your current directory
     end
 
 end

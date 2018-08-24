@@ -96,37 +96,31 @@ function stats_ERF_TFCE()
 
     fprintf('\n= STATS: Threshold-free cluster enhancement (TFCE method) =\n');
 
-    % read the channel locations
-    %addpath(genpath('C:\Users\43606024\Documents\MATLAB\eeglab14_1_1b\'));
-    %chanlocs = readlocs([ResultsFolder 'chanlocs_XYZ.txt'], 'filetype','custom', 'format',{'X','Y','Z'});
-    chanlocs = []; load([ResultsFolder 'chanlocs.mat']);
-    
-
     % Run the statistical tests (interaction & 2 main effects)
 
     % Interaction (i.e. calc sw$ in each lang, then submit the 2 sw$ for comparison)
     fprintf('\nCUE window -> Testing lang x ttype interaction:\n');
     [timelock1, timelock2] = combine_conds_for_T_test('eeglab', 'interaction', data.cuechstay, data.cuechswitch, data.cueenstay, data.cueenswitch);
-    [cue_interaction] = myWrapper_ept_TFCE(timelock1, timelock2, chanlocs);
+    [cue_interaction] = myWrapper_ept_TFCE(timelock1, timelock2);
     fprintf('\nTARGET window -> Testing lang x ttype interaction:\n');
     [timelock1, timelock2] = combine_conds_for_T_test('eeglab', 'interaction', data.targetchstay, data.targetchswitch, data.targetenstay, data.targetenswitch); %'2-1 vs 4-3');
-    [target_interaction] = myWrapper_ept_TFCE(timelock1, timelock2, chanlocs);
+    [target_interaction] = myWrapper_ept_TFCE(timelock1, timelock2);
 
     % Main effect of lang (collapse across stay-switch)
     fprintf('\nCUE window -> Main effect of lang:\n');
     [timelock1, timelock2] = combine_conds_for_T_test('eeglab', 'main_12vs34', data.cuechstay, data.cuechswitch, data.cueenstay, data.cueenswitch);
-    [cue_lang] = myWrapper_ept_TFCE(timelock1, timelock2, chanlocs);
+    [cue_lang] = myWrapper_ept_TFCE(timelock1, timelock2);
     fprintf('\nTARGET window -> Main effect of lang:\n');
     [timelock1, timelock2] = combine_conds_for_T_test('eeglab', 'main_12vs34', data.targetchstay, data.targetchswitch, data.targetenstay, data.targetenswitch); %'2-1 vs 4-3');
-    [target_lang] = myWrapper_ept_TFCE(timelock1, timelock2, chanlocs);
+    [target_lang] = myWrapper_ept_TFCE(timelock1, timelock2);
 
     % Main effect of switch (collapse across langs)
     fprintf('\nCUE window -> Main effect of ttype:\n');
     [timelock1, timelock2] = combine_conds_for_T_test('eeglab', 'main_13vs24', data.cuechstay, data.cuechswitch, data.cueenstay, data.cueenswitch);
-    [cue_ttype] = myWrapper_ept_TFCE(timelock1, timelock2, chanlocs);
+    [cue_ttype] = myWrapper_ept_TFCE(timelock1, timelock2);
     fprintf('\nTARGET window -> Main effect of ttype:\n');
     [timelock1, timelock2] = combine_conds_for_T_test('eeglab', 'main_13vs24', data.targetchstay, data.targetchswitch, data.targetenstay, data.targetenswitch); %'2-1 vs 4-3');
-    [target_ttype] = myWrapper_ept_TFCE(timelock1, timelock2, chanlocs);
+    [target_ttype] = myWrapper_ept_TFCE(timelock1, timelock2);
 
     save([ResultsFolder 'stats_TFCE.mat'], 'cue_interaction', 'cue_lang', 'cue_ttype', ...
                                            'target_interaction', 'target_lang', 'target_ttype', ...
@@ -134,6 +128,11 @@ function stats_ERF_TFCE()
             
     % Alternatively, use the built-in ANOVA function (seems to be not as sensitive)
     %{
+    % read the channel locations
+    %addpath(genpath('H:\eeglab_current\eeglab14_1_1b\'));
+    %chanlocs = readlocs('chanlocs_XYZ.txt', 'filetype','custom', 'format',{'X','Y','Z'});
+    chanlocs = []; load('chanlocs.mat');
+
     % put data into 2x2 cell array for ANOVA
     cue = {data.cuechstay, data.cuechswitch; data.cueenstay, data.cueenswitch};
     ept_TFCE_ANOVA(cue, chanlocs);    
@@ -237,40 +236,6 @@ function stats_ERF_TFCE()
             line([end_time end_time], ylim, 'Color','black'); % plot a vertical line at end_time
             hold off;
         end
-
     end
 
-    %%
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % SUBFUNCTIONS
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-    % wrapper function for calling ept_TFCE(), so that settings only need to be changed in one place
-    function Results = myWrapper_ept_TFCE(data1, data2, chanlocs)
-        
-        % the input format to TFCE requires a "channel" dimension, so we check this
-        % https://github.com/Mensen/ept_TFCE-matlab/issues/21
-        if (size(data1, 2) == 1) % if there is only 1 channel (e.g. ROI result),
-                                 % we fake a 2nd channel by making a copy of the 1st channel
-            data1 = repmat(data1, [1,2,1]);
-            data2 = repmat(data2, [1,2,1]);
-            
-            % we also need to treat this data as time-frequency data (so that TFCE won't look for a channel locations file)
-            flag_ft = true;
-            chanlocs = [];
-            
-        else % for normal (multi channel) data
-            flag_ft = false;
-        end       
-        
-        Results = ept_TFCE(data1, data2, ...
-            chanlocs, ...
-            'type', 'd', ...
-            'flag_ft', flag_ft, ...
-            'flag_tfce', true, ...
-            'nPerm', 2000, ...
-            'rSample', 200, ...
-            'flag_save', false);
-            %'saveName', [ResultsFolder 'TFCE_temp\\ept_' ROI_name '.mat']); % set a location to temporarily store the output. we don't need to save it, but if you don't set a location, it will litter arond your current directory
-    end
 end
