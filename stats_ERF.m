@@ -179,7 +179,7 @@ cfg.tail = 0;
 cfg.clustertail = 0; % 2 tailed test
 cfg.alpha = 0.05; %0.001  % threshold for cluster-level statistics (any cluster with a p-value lower than this will be reported as sig - an entry of '1' in .mask field)
 cfg.correcttail = 'prob'; % correct for 2-tailedness
-cfg.numrandomization = 1000; % Rule of thumb: use 500, and double this number if it turns out 
+cfg.numrandomization = 2000; % Rule of thumb: use 500, and double this number if it turns out 
     % that the p-value differs from the chosen alpha (e.g. 0.05) by less than 0.02
 
 numSubjects = length(files);

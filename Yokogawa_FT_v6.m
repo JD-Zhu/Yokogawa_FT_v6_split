@@ -40,7 +40,7 @@ common();
 
 % set filenames for saving the output from each stage (so that we don't have to rerun the whole thing from beginning every time)
 S1_output_filename = 'S1_preprocessed_data.mat'; % Stage 1 output (stored inside each Subject folder)
-S2_output_filename = ['S2_after_visual_rejection' filename_suffix '.mat']; % Stage 2 output (stored inside each Subject folder)
+S2_output_filename = ['S2_after_visual_rejection' filename_suffix '--removeTriggerLeak.mat']; % Stage 2 output (stored inside each Subject folder)
 S3_output_filename = ['_erf' filename_suffix '.mat']; % ERF output (stored in ResultsFolder for all subjects)
 
 % enable access to 'SubjectID' from inside "trig_fun_160_...", so that 
@@ -50,7 +50,7 @@ global SubjectID;
 % find all subject folders containing raw MEG recording
 SubjectIDs = dir([DataFolder 'M*']);
 SubjectIDs = {SubjectIDs.name}; % extract the names into a cell array
-%SubjectIDs = {'M03-AG-2784', 'M04-LL-2727'}; % or manually select which subjects to process
+%SubjectIDs = {'M10-SS-2764'}; % or manually select which subjects to process
 
 
 %% Stage 1: preprocessing & downsampling
@@ -95,11 +95,20 @@ for k = 1:length(SubjectIDs)
         
         events_allBlocks = exclude_beh_errors(SubjectID, events_allBlocks);
 
-        % remove mouth movement artefact by extracting main components from the "response" epochs
+        
+        % === ICA artefact removal ===
+
+        % remove mouth-movement artefact by extracting main components from the "response" epochs
         % and projecting these out of all trials
         load([ResultsFolder 'lay.mat']);
         [all_blocks_clean, response_comp] = remove_artefact_ICA(all_blocks, events_allBlocks, lay, 'response');
         
+        % remove trigger-leak artefact (if needed)
+        if (REMOVE_TRIGGER_ARTEFACT)
+            %load([ResultsFolder 'lay.mat']);
+            [all_blocks_clean, trigger_comp] = remove_artefact_ICA(all_blocks_clean, events_allBlocks, lay, 'trigger');
+        end
+
         
         % === Reject Outlier Trials ===
 
@@ -140,14 +149,7 @@ for i = 1:length(SubjectIDs)
 
         load([SubjectFolder S1_output_filename]); % to load 'all_blocks'
         load([SubjectFolder S2_output_filename]);
-
         
-        % remove trigger-leak artefact (if needed)
-        if (REMOVE_TRIGGER_ARTEFACT)
-            load([ResultsFolder 'lay.mat']);
-            [all_blocks_clean, trigger_comp] = remove_artefact_ICA(all_blocks_clean, events_allBlocks, lay, 'trigger');
-        end
-
         
         % perform channel repair if needed
         if (CHANNEL_REPAIR)
