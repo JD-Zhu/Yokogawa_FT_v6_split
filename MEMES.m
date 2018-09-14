@@ -89,31 +89,32 @@ function MEMES(dir_name,coreg_output,elpfile,hspfile,confile,mrkfile,path_to_MRI
 
     %% Perform ICP
 
-    % Error term variable
-    error_term = zeros(1,length(mesh_library)); 
+    % Initialise coreg error (ORE) to 1, for all candidate scalp surfaces
+    error_term = zeros(1, length(mesh_library)); 
     % Variable to hold the transformation matrices
     trans_matrix_library = [];
 
+    % loop thru all scalp surfaces, coregister each to digitised headshape
+    % and compute ORE (smallest error = winner)
     for m = 1:length(mesh_library)
-
-        numiter = 50; fprintf('Completed iteration %d of %d\n',m,length(mesh_library));
-
-        % Perform ICP
+        % Perform ICP (interative closest point) to compute ORE & trans matrix
+        numiter = 50; 
         [R, t, err, dummy, info] = icp(mesh_library{m}.pos', headshape_downsampled.pos', numiter, 'Minimize', 'plane', 'Extrapolation', true,'WorstRejection', 0.05);
 
-        % Add error to error_term
+        % Add ORE for this candidate scalp to the list of error values
         error_term(m) = err(end);
 
-        % Add transformation matrix to trans_matrix_library
+        % Add transformation matrix for this candidate to the list
         trans_matrix_library{m} = inv([real(R) real(t); 0 0 0 1]);
 
+        fprintf('Completed iteration %d of %d\n', m, length(mesh_library));
     end
 
     %% Make pretty figure
     error_term_sorted = sort(error_term, 'descend');
-    losers = find(ismember(error_term,error_term_sorted(1:3)));
-    middles = find(ismember(error_term,error_term_sorted(46:48)));
-    winners = find(ismember(error_term,error_term_sorted(end-2:end)));
+    losers = find(ismember(error_term,error_term_sorted(1:3))); % worst 3 examples
+    middles = find(ismember(error_term,error_term_sorted(46:48))); % middle 3 examples
+    winners = find(ismember(error_term,error_term_sorted(end-2:end))); % best 3 examples
 
     concat = [winners middles losers];
 
