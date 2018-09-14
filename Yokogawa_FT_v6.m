@@ -24,8 +24,8 @@ clear all % disable this line if u want breakpoints to work
 CHANNEL_REPAIR = false; % repair bad/rejected channels?
 CALC_UNCLEANED_ERF = false; % calculate uncleaned erf? (for quality check of response-component rejection)
 
-REMOVE_TRIGGER_ARTEFACT = true; % remove trigger-leak artefact? (spike around 55ms before cue onset & target onset)
-
+REMOVE_TRIGGER_ARTEFACT_ON_INDI_EPOCHS = false; % remove trigger-leak artefact? (spike around 55ms before cue onset & target onset)
+REMOVE_TRIGGER_ARTEFACT_ON_AVG_ERF = true;
 
 %%
 % run the #define section
@@ -104,10 +104,12 @@ for k = 1:length(SubjectIDs)
         [all_blocks_clean, response_comp] = remove_artefact_ICA(all_blocks, events_allBlocks, lay, 'response');
         
         % remove trigger-leak artefact (if needed)
-        if (REMOVE_TRIGGER_ARTEFACT)
-            %load([ResultsFolder 'lay.mat']);
-            [all_blocks_clean, trigger_comp] = remove_artefact_ICA(all_blocks_clean, events_allBlocks, lay, 'trigger');
-        end
+        % Note: if we put this here, then have to redo visual rejection
+        %       alternatively, we put this in Stage 3 (results looked similar)
+        %if (REMOVE_TRIGGER_ARTEFACT_ON_INDI_EPOCHS)
+        %    load([ResultsFolder 'lay.mat']);
+        %    [all_blocks_clean, trigger_comp] = remove_artefact_ICA(all_blocks_clean, events_allBlocks, lay, 'trigger');
+        %end
 
         
         % === Reject Outlier Trials ===
@@ -150,7 +152,12 @@ for i = 1:length(SubjectIDs)
         load([SubjectFolder S1_output_filename]); % to load 'all_blocks'
         load([SubjectFolder S2_output_filename]);
         
-        
+        % remove trigger-leak artefact (if needed)
+        if (REMOVE_TRIGGER_ARTEFACT_ON_INDI_EPOCHS)
+            load([ResultsFolder 'lay.mat']);
+            [all_blocks_clean, trigger_comp] = remove_artefact_ICA(all_blocks_clean, events_allBlocks, lay, 'trigger');
+        end
+
         % perform channel repair if needed
         if (CHANNEL_REPAIR)
             load([ResultsFolder 'neighbours.mat']);
@@ -211,7 +218,18 @@ for i = 1:length(SubjectIDs)
             erf_clean.(eventnames{j}) = ft_timelockbaseline(cfg, erf_clean.(eventnames{j})); % cleaned data
         end
         %}
-
+        
+        % remove trigger artefact on averaged ERF
+        if REMOVE_TRIGGER_ARTEFACT_ON_AVG_ERF
+            load([ResultsFolder 'lay.mat']);
+            
+            %TODO:
+            % we need to modify remove_artefact_ICA() to process ERF (output of ft_timelockanalysis) 
+            % instead of all_block_clean (output of ft_preprocessing)
+            [all_blocks_clean, trigger_comp] = remove_artefact_ICA(all_blocks_clean, events_allBlocks, lay, 'trigger');
+        end
+        
+        
         % SAVE all relevant variables from the workspace
         save([ResultsFolder SubjectID S3_output_filename], 'SubjectFolder', ...
             'erf_clean', 'erf_cue_combined', 'erf_target_combined'); %'erf',       
