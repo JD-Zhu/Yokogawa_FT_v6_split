@@ -17,7 +17,7 @@ function [data_clean, artefact_comp] = remove_artefact_ICA(data, events_allBlock
         % take all the "response" epochs
         cfg        = [];
         cfg.trials = events_allBlocks.response; % list of "artefact" events
-        cfg.toilim = [-0.2 0.5]; % -200 to 500ms around speech onset
+        %cfg.toilim = [-0.2 0.5]; % -200 to 500ms around speech onset
         artefact   = ft_redefinetrial(cfg, data);
         
     elseif strcmp(type_of_artefact, 'trigger')

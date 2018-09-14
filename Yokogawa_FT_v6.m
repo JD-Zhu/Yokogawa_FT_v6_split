@@ -40,7 +40,7 @@ common();
 
 % set filenames for saving the output from each stage (so that we don't have to rerun the whole thing from beginning every time)
 S1_output_filename = 'S1_preprocessed_data.mat'; % Stage 1 output (stored inside each Subject folder)
-S2_output_filename = ['S2_after_visual_rejection' filename_suffix '--removeTriggerLeak.mat']; % Stage 2 output (stored inside each Subject folder)
+S2_output_filename = ['S2_after_visual_rejection' filename_suffix '.mat']; % Stage 2 output (stored inside each Subject folder)
 S3_output_filename = ['_erf' filename_suffix '.mat']; % ERF output (stored in ResultsFolder for all subjects)
 
 % enable access to 'SubjectID' from inside "trig_fun_160_...", so that 
