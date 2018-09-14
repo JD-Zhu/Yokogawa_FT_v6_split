@@ -211,10 +211,19 @@ for i = 1:length(stats_names) % each cycle handles one effect (e.g. cue_lang)
         % if the .mask contains any non-zero entries, that's an effect
         effect = find(stats.(stat_name).(ROI_name).mask); 
         if ~isempty(effect) % if there is an effect, we print it out
+            % read out the interval of the effect
             time_points = sprintf(' %d', effect);
             start_time = stats.(stat_name).(ROI_name).time(effect(1));
             end_time = stats.(stat_name).(ROI_name).time(effect(end)); %NOTE: we are assuming the effect is continuous here (which is prob true in most cases). But really should check this!! (which is why we output the samples / time points below)
-            fprintf('%s has an effect in %s, between %.f~%.f ms (significant at samples %s).\n', ROI_name, stat_name, start_time*1000, end_time*1000, time_points); % convert units to ms
+            % read out the p-value (only reporting p-value of the most sig cluster, i.e. if there are multi clusters in the same ROI for the same contrast, the pvalues printed for the less sig clusters are incorrect)
+            if ~isempty(stats.(stat_name).(ROI_name).posclusters)
+                pvalue = stats.(stat_name).(ROI_name).posclusters(1).prob;
+            end
+            if ~isempty(stats.(stat_name).(ROI_name).negclusters) && ...
+                    (stats.(stat_name).(ROI_name).negclusters(1).prob < pvalue)
+                pvalue = stats.(stat_name).(ROI_name).negclusters(1).prob;
+            end
+            fprintf('%s has an effect in %s (p = %.4f), between %.f~%.f ms (significant at samples %s).\n', ROI_name, stat_name, pvalue, start_time*1000, end_time*1000, time_points); % convert units to ms
 
             % plot the effect period, overlaid onto the GA plot for this ROI
             if strcmp(stat_name(1:3), 'cue') % this effect occurs in cue window
