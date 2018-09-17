@@ -226,6 +226,11 @@ for i = 1:length(SubjectIDs)
             %TODO:
             % we need to modify remove_artefact_ICA() to process ERF (output of ft_timelockanalysis) 
             % instead of all_block_clean (output of ft_preprocessing)
+            % Maybe put the 9 erf.avg as 9 trials in a fake struct like all_block_clean,
+            % then read out the result & put back into the erf struct
+            %
+            %Q: does this make the previously-computed covmatrix invalid?  
+            %
             [all_blocks_clean, trigger_comp] = remove_artefact_ICA(all_blocks_clean, events_allBlocks, lay, 'trigger');
         end
         
