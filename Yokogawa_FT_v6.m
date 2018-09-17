@@ -222,16 +222,29 @@ for i = 1:length(SubjectIDs)
         % remove trigger artefact on averaged ERF
         if REMOVE_TRIGGER_ARTEFACT_ON_AVG_ERF
             load([ResultsFolder 'lay.mat']);
+            [all_blocks_clean, trigger_comp] = remove_artefact_ICA(all_blocks_clean, events_allBlocks, lay, 'trigger');
             
             %TODO:
             % we need to modify remove_artefact_ICA() to process ERF (output of ft_timelockanalysis) 
             % instead of all_block_clean (output of ft_preprocessing)
-            % Maybe put the 9 erf.avg as 9 trials in a fake struct like all_block_clean,
-            % then read out the result & put back into the erf struct
+            
+            % Sln:
+            % ft_rejectcomponent automatically converts timelock data to raw (and then
+            % converts back) if you pass in one condition at a time.
+            % the "cov" and "var" fields get removed, but we only need "cov" from 
+            % erf_cue_combined & erf_target_combined anyway, not from the indi conditions.
+
+            data = erf_clean.cuechstay;
+
+            cfg              = [];
+            cfg.demean       = 'no';
+            cfg.component    = 1:1; % project out the 1st principal component
+            data_clean = ft_rejectcomponent(cfg, artefact_comp, data);
+
+            % ONLY REMAINING QUESTION: 
+            % Does this make the previously-computed covmatrix invalid
+            % (because it was computed w/o artefact rejection)?  
             %
-            %Q: does this make the previously-computed covmatrix invalid?  
-            %
-            [all_blocks_clean, trigger_comp] = remove_artefact_ICA(all_blocks_clean, events_allBlocks, lay, 'trigger');
         end
         
         
