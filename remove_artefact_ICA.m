@@ -53,8 +53,8 @@ function [data_clean, artefact_comp] = remove_artefact_ICA(data, events_allBlock
     cfg          = [];
     artefact_erf = ft_timelockanalysis(cfg, artefact);
 
-    %Run ICA on the "artefact" erf
-    disp('About to run ICA using the SVD method')
+    %Run PCA on the "artefact" erf
+    disp('About to run PCA using the SVD method')
     cfg           = [];
     cfg.method    = 'svd';
     artefact_comp = ft_componentanalysis(cfg, artefact_erf);
@@ -65,11 +65,13 @@ function [data_clean, artefact_comp] = remove_artefact_ICA(data, events_allBlock
     colormap(flipud(brewermap(64, 'RdBu'))) % change the colormap
 
     %Display the components identified by PCA - change layout as needed
+    %{
     cfg          = [];
     cfg.viewmode = 'component';
     cfg.layout   = lay;
-    %ft_databrowser(cfg, artefact_comp)
-    %drawnow; pause;
+    ft_databrowser(cfg, artefact_comp)
+    drawnow; pause;
+    %}
 
     % project certain components in the artefact erf out of all trials
     if strcmp(type_of_artefact, 'response')

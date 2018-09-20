@@ -39,8 +39,8 @@ common();
 %end    
 
 % set filenames for saving the output from each stage (so that we don't have to rerun the whole thing from beginning every time)
-S1_output_filename = 'S1_preprocessed_data.mat'; % Stage 1 output (stored inside each Subject folder)
-S2_output_filename = ['S2_after_visual_rejection' filename_suffix '.mat']; % Stage 2 output (stored inside each Subject folder)
+S1_output_filename = ''; %'S1_preprocessed_data.mat'; % Stage 1 output (stored inside each Subject folder)
+S2_output_filename = ''; %['S2_after_visual_rejection' filename_suffix '.mat']; % Stage 2 output (stored inside each Subject folder)
 S3_output_filename = ['_erf' filename_suffix '.mat']; % ERF output (stored in ResultsFolder for all subjects)
 
 % enable access to 'SubjectID' from inside "trig_fun_160_...", so that 
@@ -50,7 +50,7 @@ global SubjectID;
 % find all subject folders containing raw MEG recording
 SubjectIDs = dir([DataFolder 'M*']);
 SubjectIDs = {SubjectIDs.name}; % extract the names into a cell array
-%SubjectIDs = {'M10-SS-2764'}; % or manually select which subjects to process
+SubjectIDs = {'M10-SS-2764'}; % or manually select which subjects to process
 
 
 %% Stage 1: preprocessing & downsampling
@@ -61,9 +61,12 @@ for i = 1:length(SubjectIDs)
     SubjectFolder = [DataFolder SubjectID '\\'];
     S1_output_file = [SubjectFolder S1_output_filename];
 
+    
     % if haven't already processed this stage before, do it now & save a copy
     if (exist(S1_output_file, 'file') ~= 2)    
-        [all_blocks, trialinfo_b] = preprocessing(SubjectFolder);
+        %[all_blocks, trialinfo_b] = preprocessing(SubjectFolder);
+    %TEMP: reject trigger artefact on raw continuous data
+    [all_blocks, trialinfo_b] = preprocessing2(SubjectFolder);
 
         % downsample the data for saving
         %all_blocks.time(1:end) = all_blocks.time(1); % this avoids numeric round off issues in the time axes upon resampling
