@@ -195,6 +195,11 @@ function source_v1
             sourcemodel = ft_prepare_sourcemodel(cfg); % creates individual sourcemodel
                                                        % (the grid points map 1-to-1 onto the template grid points, with the .pos field 
                                                        % specifying the actual coordinates of these grid points in subject space)
+                                                                                                            
+%NOTE: if you use "MEMES2", Step 3 start from here!!
+%      The warping is already done for you. 
+%      Just load the desired grid (e.g. "sourcemodel3d_5mm") from the MEMES output,
+%      and plug directly into ft_prepare_leadfield
 
             % Plots for sanity checks
             % plot headmodel, grid, and mri
