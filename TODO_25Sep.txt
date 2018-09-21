@@ -1,0 +1,24 @@
+New method:
+Run PCA on raw continuous data, identify the component containing the trigger artefact. Reject the artefact from continuous data, then proceed to preprocessing (filtering, detrend, etc).
+
+Script has been modified for this (only on M3 local repo).
+
+===
+
+What to do?
+
+Run a few indi subjects. Visually identify components to reject & enter into dlgbox.
+Check single-subject GFP - see if 'trigger spike' is gone.
+
+
+RESULTS:
+M03 - not so good. Already being quite non-conservative (picked 6 suspicious comps to remove), but trigger spike is still present in both pre-cue & pre-target baseline around -60ms.
+
+
+= If this doesn't work =
+
+Opt 1. go back to removing trigger artefact on average ERF (still waiting on an answer regarding the validity of this)
+
+Opt 2. try other links Paul sent me on 20 Sep
+
+Opt 3. stick with the "[best]2" version from b4 PGRF trip

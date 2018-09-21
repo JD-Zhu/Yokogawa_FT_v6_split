@@ -25,7 +25,7 @@ CHANNEL_REPAIR = false; % repair bad/rejected channels?
 CALC_UNCLEANED_ERF = false; % calculate uncleaned erf? (for quality check of response-component rejection)
 
 REMOVE_TRIGGER_ARTEFACT_ON_INDI_EPOCHS = false; % remove trigger-leak artefact? (spike around 55ms before cue onset & target onset)
-REMOVE_TRIGGER_ARTEFACT_ON_AVG_ERF = true;
+REMOVE_TRIGGER_ARTEFACT_ON_AVG_ERF = false;
 
 %%
 % run the #define section
@@ -39,8 +39,8 @@ common();
 %end    
 
 % set filenames for saving the output from each stage (so that we don't have to rerun the whole thing from beginning every time)
-S1_output_filename = ''; %'S1_preprocessed_data.mat'; % Stage 1 output (stored inside each Subject folder)
-S2_output_filename = ''; %['S2_after_visual_rejection' filename_suffix '.mat']; % Stage 2 output (stored inside each Subject folder)
+S1_output_filename = 'S1_preprocessed_data.mat'; % Stage 1 output (stored inside each Subject folder)
+S2_output_filename = ['S2_after_visual_rejection' filename_suffix '.mat']; % Stage 2 output (stored inside each Subject folder)
 S3_output_filename = ['_erf' filename_suffix '.mat']; % ERF output (stored in ResultsFolder for all subjects)
 
 % enable access to 'SubjectID' from inside "trig_fun_160_...", so that 
@@ -50,7 +50,7 @@ global SubjectID;
 % find all subject folders containing raw MEG recording
 SubjectIDs = dir([DataFolder 'M*']);
 SubjectIDs = {SubjectIDs.name}; % extract the names into a cell array
-SubjectIDs = {'M10-SS-2764'}; % or manually select which subjects to process
+SubjectIDs = {'M03-AG-2784'}; % or manually select which subjects to process
 
 
 %% Stage 1: preprocessing & downsampling
@@ -265,7 +265,7 @@ for i = 1:length(SubjectIDs)
     if (CALC_UNCLEANED_ERF)
         %plot_ERF(erf, erf_clean, lay, true);
     else % clean erf only
-        %plot_ERF([], erf_clean, lay, false);
+        plot_ERF([], erf_clean, lay, false);
     end
     
 end

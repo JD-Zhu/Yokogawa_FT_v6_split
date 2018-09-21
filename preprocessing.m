@@ -84,8 +84,7 @@ function [all_blocks, trialinfo_b] = preprocessing(SubjectFolder)
     % combine data from all the blocks into one dataset
     all_blocks = block(1);
     for i = 2:length(block) % each cycle appends one block
-        cfg = [];
-        all_blocks = ft_appenddata(cfg, all_blocks, block(i));
+        all_blocks = ft_appenddata([], all_blocks, block(i));
     end
     
 end

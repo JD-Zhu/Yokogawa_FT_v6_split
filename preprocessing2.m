@@ -11,6 +11,7 @@
         end
     end
     
+    % each cycle processes one '.con' file
     for i = 1:length(files)
         rawfile = [SubjectFolder files(i).name];
 
@@ -23,77 +24,104 @@
         cfg = ft_definetrial(cfg);
         
         cfg.continuous = 'yes';
-        all_blocks = ft_preprocessing(cfg);
+        alldata = ft_preprocessing(cfg);
         
         % Select channels 1-160 (i.e. MEG data)
         cfg         = [];
-        cfg.channel = all_blocks.label(1:160);
-        all_blocks = ft_selectdata(cfg, all_blocks);
+        cfg.channel = alldata.label(1:160);
+        alldata = ft_selectdata(cfg, alldata);
         
-        block(i) = all_blocks;
+        block(i) = alldata;
     end
     
     % combine data from all the blocks into one dataset
     all_blocks = block(1);
     for i = 2:length(block) % each cycle appends one block
-        cfg = [];
-        all_blocks = ft_appenddata(cfg, all_blocks, block(i));
+        all_blocks = ft_appenddata([], all_blocks, block(i));
     end
 
     
-    % Run PCA on the raw continuous data
-    disp('About to run PCA using the SVD method')
-    cfg           = [];
-    cfg.method    = 'svd';
-    comp = ft_componentanalysis(cfg, all_blocks);
-    %save([SubjectFolder 'artefact_comp.mat'],'artefact_comp','-v7.3')
-
-    %Change the colourmap
-    ft_hastoolbox('brewermap', 1);         % ensure this toolbox is on the path
-    colormap(flipud(brewermap(64, 'RdBu'))) % change the colormap
-
-    %Display the components identified by PCA - change layout as needed
-    cfg          = [];
-    cfg.viewmode = 'component';
-    %cfg.channels = {'AG083', 'AG087', 'AG088', 'AG082', 'AG084', 'AG086'};
-    %cfg.plotlabels              = 'yes';
-    load([ResultsFolder 'lay.mat']);
-    cfg.layout   = lay;
-    ft_databrowser(cfg, comp)
-    drawnow; pause;
+    %% Run PCA on the raw continuous data
+    %  to identify components containing the trigger artefact & reject them from continuous data
     
+    trigger_comps_savefile = [SubjectFolder 'PCA_trigger_comps'];
     
-    % highlight channens on the component topo
-    figure;
-    %Change the colourmap
-    ft_hastoolbox('brewermap', 1);         % ensure this toolbox is on the path
-    colormap(flipud(brewermap(64, 'RdBu'))) % change the colormap
+    % if haven't visually identified the components to reject, do it now
+    if (exist(trigger_comps_savefile, 'file') ~= 2)   
+
+        disp('\nAbout to run PCA using the SVD method\n')
+        cfg           = [];
+        cfg.method    = 'svd';
+        comp = ft_componentanalysis(cfg, all_blocks);
+        %save([SubjectFolder 'artefact_comp.mat'],'artefact_comp','-v7.3')
+
+        %Change the colourmap
+        ft_hastoolbox('brewermap', 1);         % ensure this toolbox is on the path
+        colormap(flipud(brewermap(64, 'RdBu'))); % change the colormap
+
+        %Display the components identified by PCA - change layout as needed
+        cfg          = [];
+        cfg.viewmode = 'component';
+        %cfg.channels = {'AG083', 'AG087', 'AG088', 'AG082', 'AG084', 'AG086'};
+        %cfg.plotlabels              = 'yes';
+        load([ResultsFolder 'lay.mat']);
+        cfg.layout   = lay;
+        ft_databrowser(cfg, comp);
+        drawnow; 
+        %pause;
 
 
-    cfg           = [];
-    cfg.component = 1:15;       % specify the component(s) that should be plotted
-    cfg.layout    = lay; % specify the layout file that should be used for plotting
-    cfg.comment   = 'no';
-    cfg.highlight = 'on';
-    cfg.highlightchannel   = {'AG083', 'AG087', 'AG088', 'AG082', 'AG084', 'AG086', 'AG081', 'AG085','AG089'};
-    ft_topoplotIC(cfg, comp)
+        % highlight channens on the component topo
+        figure;
+        %Change the colourmap
+        ft_hastoolbox('brewermap', 1);         % ensure this toolbox is on the path
+        colormap(flipud(brewermap(64, 'RdBu'))); % change the colormap
+
+
+        cfg           = [];
+        cfg.component = 1:16;       % specify the component(s) that should be plotted
+        cfg.layout    = lay; % specify the layout file that should be used for plotting
+        cfg.comment   = 'no';
+        cfg.highlight = 'on';
+        cfg.highlightchannel   = {'AG083', 'AG087', 'AG088', 'AG082', 'AG084', 'AG086', 'AG081', 'AG085','AG089'};
+        ft_topoplotIC(cfg, comp);
+        
+        pause; % wait for user to identify the components to reject.
+               % press enter to continue ...
+
+
+        % TEMP: visually identify the components to reject, enter those into
+        % the section below:
+        msg = sprintf('\nWhich components would you like to reject?\n\nEnter the component numbers below\n(separated by comma):\n');
+        title = 'Select components to reject';
+        answer = inputdlg(msg, title, [1 50]);
+        if ~isempty(answer)
+            comps_to_reject = str2num(answer{1}); % convert text input into numbers
+        else
+            comps_to_reject = [];
+        end
+        
+        save (trigger_comps_savefile, 'comps_to_reject');
     
-    % TEMP: visually identify the components to reject, enter those into
-    % the section below:
+    else % already done manually b4, just load the savefile
+        load(trigger_comps_savefile);
+    end
     
     % project the identified components out of raw continuous data
-    cfg              = [];
-    cfg.component    = 4:6;
-    all_blocks = ft_rejectcomponent(cfg, comp, all_blocks);
+    if ~isempty(comps_to_reject)
+        cfg              = [];
+        cfg.component    = comps_to_reject;
+        all_blocks = ft_rejectcomponent(cfg, comp, all_blocks);
+    end
     
     
+    %% continue preprocessing steps
     
-    
-    % ft_preprocessing: reads in MEG data
+    % bandpass filter
     cfg = [];
     cfg.bpfilter   = 'yes';
     cfg.bpfreq     = [0.5 40]; % bandpass filter
-    all_blocks = ft_preprocessing(cfg);
+    all_blocks = ft_preprocessing(cfg, all_blocks);
 
     % deal with 50Hz line noise (necessary even after bandpass filter, coz the 50Hz noise is huge)
     cfg          = [];
@@ -101,18 +129,40 @@
     cfg.bsfreq   = [49.5 50.5];
     all_blocks = ft_preprocessing(cfg, all_blocks);
 
-    %     Define trials using custom trialfun
-    cfg                   = [];
-    cfg.dataset           = rawfile;
-    cfg.continuous        = 'yes';
-    cfg.trialfun          = 'trig_fun_160_basic_v2';
-    cfg.trialdef.prestim  = 1;         % pre-stimulus interval
-    cfg.trialdef.poststim = 1;        % post-stimulus interval
-    trialinfo_b(i) = ft_definetrial(cfg);
-    all_blocks = ft_redefinetrial(trialinfo_b(i), all_blocks);
+    % Define trials using custom trialfun
+    % (we need to do each block separately)
+    clear block alldata;
+    for i = 1:length(files)
+        rawfile = [SubjectFolder files(i).name];
 
-    cfg         = [];
-    cfg.demean  = 'yes'; % subtracts the mean of the time window from all samples (i.e. centres the waveform on 0)
-    cfg.detrend = 'yes'; % removes low-frequency drift
-    all_blocks = ft_preprocessing(cfg, all_blocks);
+        cfg                   = [];
+        cfg.dataset           = rawfile;
+        cfg.continuous        = 'yes';
+        cfg.trialfun          = 'trig_fun_160_basic_v2';
+        cfg.trialdef.prestim  = 1;         % pre-stimulus interval
+        cfg.trialdef.poststim = 1;        % post-stimulus interval
+        trialinfo_b(i) = ft_definetrial(cfg); % run this on the original continuous data
+                                              % to create the .trl field,
+                                              % coz this fn only takes a "rawfile" as input, 
+                                              % not existing data struct from ft_preprocessing
+        
+        % make a copy of all_blocks, but only keep info relevant to the current block
+        alldata = all_blocks;
+        alldata.sampleinfo = alldata.sampleinfo(i,:);
+        alldata.time = alldata.time(i);        
+        alldata.trial = alldata.trial(i);
+        alldata = ft_redefinetrial(trialinfo_b(i), alldata);
+
+        % demean & detrend
+        cfg         = [];
+        cfg.demean  = 'yes'; % subtracts the mean of the time window from all samples (i.e. centres the waveform on 0)
+        cfg.detrend = 'yes'; % removes low-frequency drift
+        block(i) = ft_preprocessing(cfg, alldata);
+    end
+    
+    % combine data from all the blocks into one dataset
+    all_blocks = block(1);
+    for i = 2:length(block) % each cycle appends one block
+        all_blocks = ft_appenddata([], all_blocks, block(i));
+    end
  end
