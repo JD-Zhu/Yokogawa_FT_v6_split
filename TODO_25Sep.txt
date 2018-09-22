@@ -17,8 +17,13 @@ M03 - not so good. Already being quite non-conservative (picked 6 suspicious com
 
 = If this doesn't work =
 
-Opt 1. go back to removing trigger artefact on average ERF (still waiting on an answer regarding the validity of this)
+Opt 1. go back to removing trigger artefact on average ERF (still waiting on an answer regarding the validity of this) <= ACTUALLY THIS SHOULD BE VALID! Because the covmatrix is not computed from the baseline period (i.e. it should be irrelevant whether we clean the trigger spike or not); the cue-locked covmatrix may be affected by the spike at the end of the cue window, but we can easily fix this - just compute the covmatrix on [0 0.7].
+
+[DO THIS FIRST] On analysis comp:
+- branch from current master: finish script to remove trigger on ave ERF:
+    Try on a few subjects. Check single-subject GFP - see if 'trigger spike' is gone.
+
 
 Opt 2. try other links Paul sent me on 20 Sep
 
-Opt 3. stick with the "[best]2" version from b4 PGRF trip
+Opt 3. stick with the "[best]2" version from b4 PGRF trip <= main effect of switch (in cue window) is only marginally sig
