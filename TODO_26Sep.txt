@@ -1,3 +1,11 @@
+TODO:
+
+1. Test Robert's MEMES3 script. Just copy the MRI set w/ headmodel & sourcemodel into E:\completed, then run source_v1
+
+2. See [DO THIS FIRST] below. <= maybe check with Paul first: can I use 0~700ms, while ERF is computed 0~750ms? exactly how to select covariance windows appropriately? Also for target-locked, is it ok to use 0~500ms?
+
+========================
+
 New method:
 Run PCA on raw continuous data, identify the component containing the trigger artefact. Reject the artefact from continuous data, then proceed to preprocessing (filtering, detrend, etc).
 

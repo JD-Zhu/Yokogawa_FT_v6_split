@@ -43,8 +43,9 @@ function source_v1
     templates_dir = [pwd '\\..\\FT_templates\\']; % Location of the required templates (headmodel, grid & mri).
                                            % These usually come with the FT toolbox, but for ease of access
                                            % (consistent path across computers), I've stored a copy here.                                  
-    MRI_folder = [pwd '\\..\\..\\..\\..\\MRI_databases\\HCP\\']; % location of your MRI database 
+    %MRI_folder = [pwd '\\..\\..\\..\\..\\MRI_databases\\HCP\\']; % location of your MRI database 
                                                                  % (consistent relative path across computers)                                                                                                                                  
+    MRI_folder = 'E:\\completed\\'; % location of your MRI database 
     SubjectFolders = listFolders(DataFolder);
 
 
@@ -78,7 +79,11 @@ function source_v1
             confile = [filename_base, '_B1.con'];
             mrkfile = [filename_base, '_ini.mrk']; % choose which marker file to use
 
-            MEMES(pwd,coreg_output,elpfile,hspfile,confile,mrkfile,path_to_MRI_library,mesh_library,initial_mri_realign);
+            %MEMES(pwd,coreg_output,elpfile,hspfile,confile,mrkfile,path_to_MRI_library,mesh_library,initial_mri_realign);
+% Trying out Robert's MEMES3:            
+MEMES3(pwd, elpfile, hspfile, confile, mrkfile, path_to_MRI_library,...
+mesh_library, initial_mri_realign, '', 'best', [0.99:0.01:1.01], 5, 'no')
+
 
             %mrifile = 'single_subj_T1.nii'; % use the template that comes with FT
             % don't use the dummy .mri file created by ME160 - it doesn't contain anything
