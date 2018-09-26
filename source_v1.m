@@ -12,6 +12,10 @@ function source_v1
     % use which method ('svd' or 'centroid') for collapsing 
     % all vertices in an ROI into a single virtual sensor?
     VE_METHOD = 'svd';
+    
+    % which version of MEMES to use?
+    % (MEMES1 - for comparability with earlier results; MEMES3 - for Chinese MRI database)
+    MEMES_VERSION = 'MEMES3';
 
     
     % = Save files =
@@ -27,7 +31,7 @@ function source_v1
     %%
     % NOTE: always run from the "analysis_scripts" folder, to ensure all relative
     % paths work as expected
-    cd('D:\Judy\Exp1\6_MEG-data\analysis_scripts\Yokogawa_FT_v6_split');
+    %cd('D:\Judy\Exp1\6_MEG-data\analysis_scripts\Yokogawa_FT_v6_split');
 
     addpath(pwd); % allow access to scripts in this folder even after we cd into each SubjectFolder
     %addpath([pwd '\\coreg-master\\']); % allow access to coreg scripts
@@ -43,56 +47,83 @@ function source_v1
     templates_dir = [pwd '\\..\\FT_templates\\']; % Location of the required templates (headmodel, grid & mri).
                                            % These usually come with the FT toolbox, but for ease of access
                                            % (consistent path across computers), I've stored a copy here.                                  
-    %MRI_folder = [pwd '\\..\\..\\..\\..\\MRI_databases\\HCP\\']; % location of your MRI database 
-                                                                 % (consistent relative path across computers)                                                                                                                                  
-    MRI_folder = 'E:\\completed\\'; % location of your MRI database 
+
     SubjectFolders = listFolders(DataFolder);
 
 
     %% each cycle processes one subject
-    for h = 1:length(SubjectFolders)
+    for h = 1:3%length(SubjectFolders)
 
         SubjectID = SubjectFolders{h};
         SubjectFolder = [DataFolder, '\\', SubjectID];
         cd(SubjectFolder); % change directory
 
         %% Step 1: coreg (to obtain individualised headmodel & mri)
-        coreg_output = [pwd '\\MEMES\\']; % where to store the output from MEMES
-
+        
+        % check whether this is a subject folder
         elp_file  = dir('*.elp'); % find the .elp file
         if isempty(elp_file) % not a subject folder, skip
             fprintf('\n"%s": Not a subject folder - skip!\n', SubjectID);
             continue;
         end
 
-        % if headmodel etc haven't been generated, do this now
-        if ~exist([coreg_output 'headmodel_singleshell.mat'], 'file')
-            % prepare all the inputs to MEMES
-            temp = load([MRI_folder 'mesh_library.mat']);
-            mesh_library = temp.mesh_library;
-            initial_mri_realign = temp.initial_mri_realign;
-            path_to_MRI_library = MRI_folder;
-
-            filename_base = elp_file.name(1:strfind(elp_file.name,'.')-1); % get the base filename (ie. remove suffix)
-            elpfile = [filename_base, '.elp'];
-            hspfile = [filename_base, '.hsp'];
-            confile = [filename_base, '_B1.con'];
-            mrkfile = [filename_base, '_ini.mrk']; % choose which marker file to use
-
-            %MEMES(pwd,coreg_output,elpfile,hspfile,confile,mrkfile,path_to_MRI_library,mesh_library,initial_mri_realign);
-% Trying out Robert's MEMES3:            
-MEMES3(pwd, elpfile, hspfile, confile, mrkfile, path_to_MRI_library,...
-mesh_library, initial_mri_realign, '', 'best', [0.99:0.01:1.01], 5, 'no')
-
-
-            %mrifile = 'single_subj_T1.nii'; % use the template that comes with FT
-            % don't use the dummy .mri file created by ME160 - it doesn't contain anything
-            %coreg_yokogawa_icp(pwd, confile, mrkfile, mrifile, ...
-            %    hspfile, elpfile, 100, 0.1); %[pwd,'\\',filename_base,'_MRI\\',filename_base,'.nii'], ...
+        % prepare all the inputs to MEMES
+        filename_base = elp_file.name(1:strfind(elp_file.name,'.')-1); % get the base filename (ie. remove suffix)
+        elpfile = [filename_base, '.elp'];
+        hspfile = [filename_base, '.hsp'];
+        confile = [filename_base, '_B1.con'];
+        mrkfile = [filename_base, '_ini.mrk']; % choose which marker file to use
+                
+        % check which version of MEMES to use
+        if strcmp(MEMES_VERSION, 'MEMES1')
+            % location of your MRI database (consistent relative path across computers)  
+            MRI_folder = [pwd '\\..\\..\\..\\..\\MRI_databases\\HCP\\']; % HCP database
+            coreg_output = [pwd '\\MEMES\\']; % where to store the output from MEMES
             
+            % if headmodel etc haven't been generated, do this now
+            if ~exist([coreg_output 'headmodel_singleshell.mat'], 'file')
+                % prepare extra inputs to MEMES
+                temp = load([MRI_folder 'mesh_library.mat']);
+                mesh_library = temp.mesh_library;
+                initial_mri_realign = temp.initial_mri_realign;
+                path_to_MRI_library = MRI_folder;
+
+                MEMES(pwd,coreg_output,elpfile,hspfile,confile,mrkfile,path_to_MRI_library,mesh_library,initial_mri_realign);
+
+                %mrifile = 'single_subj_T1.nii'; % use the template that comes with FT
+                % don't use the dummy .mri file created by ME160 - it doesn't contain anything
+                %coreg_yokogawa_icp(pwd, confile, mrkfile, mrifile, ...
+                %    hspfile, elpfile, 100, 0.1); %[pwd,'\\',filename_base,'_MRI\\',filename_base,'.nii'], ...
+            end
+            
+        elseif strcmp(MEMES_VERSION, 'MEMES3')
+            % location of your MRI database (consistent relative path across computers)  
+            MRI_folder = 'E:\\completed\\'; % SLIM Chinese database
+            coreg_output = [pwd '\\MEMES_Chinese\\']; % where to store the output from MEMES
+            
+            % if headmodel etc haven't been generated, do this now
+            if ~exist([coreg_output 'headmodel_singleshell.mat'], 'file')
+                MEMES3(pwd, elpfile, hspfile, confile, mrkfile, MRI_folder,...
+                    '', 'best', [0.99:0.01:1.01], 5, 'no')
+                
+                % move the MEMES output into the coreg_output folder.
+                if ~exist(coreg_output)
+                    mkdir(coreg_output);
+                end                
+                % the files to move:
+                % grad_trans, headshape, headmodel, trans_matrix, sourcemodel3d, shape
+                movefile *trans* coreg_output
+                movefile *shape* coreg_output
+                movefile *model* coreg_output
+            end
+            
+        else
+            fprintf('\nError in source_v1.m: Incorrect selection of MEMES version. Please specify at the top of the script.\n');
         end
         
-        % now load the headmodel & grads & mri generated by MEMES
+continue;    
+        
+       % now load the headmodel & grads & mri generated by MEMES
         temp = load ([coreg_output 'headmodel_singleshell.mat']);
         headmodel = temp.headmodel_singleshell;
         temp = load ([coreg_output 'grad_trans.mat']);
