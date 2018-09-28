@@ -2,9 +2,29 @@ TODO:
 
 1. Test Robert's MEMES3 script (by running source_v1).
 
-2. See [DO THIS FIRST] below. <= maybe check with Paul first: can I use 0~700ms, while ERF is computed 0~750ms? exactly how to select covariance windows appropriately? Also for target-locked, is it ok to use 0~500ms?
+Problems:
+(1) subjects with 2 bad coils show upside-down sensors (M08, M10) -> wait for Rob to check (Monday)
 
+(2) meshes with holes -> we'll just remove these MRIs from the database; asked Josh & Emily if they saw any holes when they did the scalp segmentation 
+
+2. Trigger leak
+
+Opt (1):
+
+Go back to projecting out on ave ERF
+On analysis comp:
+- branch from current master: finish script to remove trigger on ave ERF:
+    Try on a few subjects. Check single-subject GFP - see if 'trigger spike' is gone.
+
+Have checked with Paul: can use 0~650ms for covmatrix, while ERF is computed 0~750ms. For target-locked, prob ok to use 0~500ms as I did.
+
+Q: Exactly how to select covariance windows appropriately?
+A: usually beamformer uses the whole trial to compute covmatrix (avg over time).
 [Do some reading on this myself / ask on forums]
+
+Opt (2):
+
+remove the -60-45ms section in cue-lock baseline, target-lock baseline, and end of cue-locked. replace using a "line of best fit" joining the 2 edge points.
 
 ========================
 
@@ -29,9 +49,6 @@ M03 - not so good. Already being quite non-conservative (picked 6 suspicious com
 
 Opt 1. go back to removing trigger artefact on average ERF (still waiting on an answer regarding the validity of this) <= ACTUALLY THIS SHOULD BE VALID! Because the covmatrix is not computed from the baseline period (i.e. it should be irrelevant whether we clean the trigger spike or not); the cue-locked covmatrix may be affected by the spike at the end of the cue window, but we can easily fix this - just compute the covmatrix on [0 0.7].
 
-[DO THIS FIRST] On analysis comp:
-- branch from current master: finish script to remove trigger on ave ERF:
-    Try on a few subjects. Check single-subject GFP - see if 'trigger spike' is gone.
 
 
 Opt 2. try other links Paul sent me on 20 Sep
