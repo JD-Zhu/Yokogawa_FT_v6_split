@@ -25,7 +25,7 @@ CHANNEL_REPAIR = false; % repair bad/rejected channels?
 CALC_UNCLEANED_ERF = false; % calculate uncleaned erf? (for quality check of response-component rejection)
 
 REMOVE_TRIGGER_ARTEFACT_ON_INDI_EPOCHS = false; % remove trigger-leak artefact? (spike around 55ms before cue onset & target onset)
-REMOVE_TRIGGER_ARTEFACT_ON_AVG_ERF = false;
+REMOVE_TRIGGER_ARTEFACT_ON_AVG_ERF = true;
 
 %%
 % run the #define section

@@ -13,9 +13,8 @@ Problems:
 Opt (1):
 
 Go back to projecting out on ave ERF
-On analysis comp:
-- branch from current master: finish script to remove trigger on ave ERF:
-    Try on a few subjects. Check single-subject GFP - see if 'trigger spike' is gone.
+-   Finish script to remove trigger on ave ERF;
+-   Try on a few subjects. Check single-subject GFP - see if 'trigger spike' is gone.
 
 Have checked with Paul: can use 0~650ms for covmatrix, while ERF is computed 0~750ms. For target-locked, prob ok to use 0~500ms as I did.
 
