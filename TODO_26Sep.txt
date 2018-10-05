@@ -1,11 +1,12 @@
 TODO:
 
-1. Test Robert's MEMES3 script (by running source_v1).
+[DONE] 1. Test Robert's MEMES3 script (by running source_v1).
 
 Problems:
-(1) subjects with 2 bad coils show upside-down sensors (M08, M10) -> wait for Rob to check (Monday)
+(1) subjects with 2 bad coils show upside-down sensors (M08, M10) 
 
-(2) meshes with holes -> we'll just remove these MRIs from the database; asked Josh & Emily if they saw any holes when they did the scalp segmentation 
+(2) meshes with holes -> we'll just remove these MRIs from the database
+ 
 
 2. Trigger leak
 
