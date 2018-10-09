@@ -15,7 +15,7 @@ function source_v1
     
     % which version of MEMES to use?
     % (MEMES1 - for comparability with earlier results; MEMES3 - for Chinese MRI database)
-    MEMES_VERSION = 'MEMES3';
+    MEMES_VERSION = 'MEMES1';
 
     
     % = Save files =
@@ -268,12 +268,12 @@ function source_v1
             ft_plot_mesh(sourcemodel.pos(sourcemodel.inside,:));
             %}           
             % plot headmodel, grid, and sensor locations
-            %
+            %{
             figure;
             ft_plot_sens(grads, 'style', '*b'); % plot the MEG sensor locations
             ft_plot_vol(headmodel, 'edgecolor', 'cortex'); alpha 0.4; % plot the single shell (i.e. brain shape)
             ft_plot_mesh(sourcemodel.pos(sourcemodel.inside,:)); % plot all vertices (ie. grid points) that are inside the brain
-            %
+            %}
 
             
             % Create the leadfield

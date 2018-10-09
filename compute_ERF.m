@@ -29,7 +29,7 @@ function [erf_clean, erf_cue_combined, erf_target_combined] = compute_ERF (trial
     cfg = [];
     cue_combined = ft_appenddata(cfg, trials_clean.cuechstay, trials_clean.cuechswitch, trials_clean.cueenstay, trials_clean.cueenswitch);
     cfg.covariance       = 'yes';
-    cfg.covariancewindow = [0 0.75];
+    cfg.covariancewindow = [0 0.65];
     erf_cue_combined = ft_timelockanalysis(cfg, cue_combined);
     % Compute erf & cov matrix for each condition 
     for j = conds_cue

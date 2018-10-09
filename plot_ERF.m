@@ -1,4 +1,4 @@
-% Plots ERF. 
+% Plots ERF for each condition. 
 % Generates and plots GFP.
 
 % can use this to regen all plots from saved erf results:
@@ -6,10 +6,12 @@
 %load([ResultsFolder 'lay.mat']); 
 
 % if you want to compare before & after artefact removal (erf vs. erf_clean),
-% set plot_uncleaned to 'true' & supply the 'erf' input arg.
+% set plot_uncleaned to 'true' & supply the 'erf' input arg;
 % if only plotting cleaned erf & GFP, can specify the 'erf' arg as []
 
-function plot_ERF (erf, erf_clean, lay, plot_uncleaned)
+% if you only want the GFP, set both plot_uncleaned & plot_multiplot to false
+
+function plot_ERF (erf, erf_clean, lay, plot_uncleaned, plot_multiplot)
 
     % run the #define section
     global conds_cue; global conds_target; global eventnames;
@@ -36,15 +38,17 @@ function plot_ERF (erf, erf_clean, lay, plot_uncleaned)
 
     % to compare the 4 conds
     % (requires the list of 'cfg' assignments above, if running in console)
-    figure('Name','ft_multiplotER: erf_clean.cuechstay, erf_clean.cuechswitch, erf_clean.cueenstay, erf_clean.cueenswitch');
-    cfg.xlim = [-0.2 0.75];
-    ft_multiplotER(cfg, erf_clean.cuechstay, erf_clean.cuechswitch, erf_clean.cueenstay, erf_clean.cueenswitch);
-    legend(eventnames(conds_cue));
+    if (plot_multiplot)
+        figure('Name','ft_multiplotER: erf_clean.cuechstay, erf_clean.cuechswitch, erf_clean.cueenstay, erf_clean.cueenswitch');
+        cfg.xlim = [-0.2 0.75];
+        ft_multiplotER(cfg, erf_clean.cuechstay, erf_clean.cuechswitch, erf_clean.cueenstay, erf_clean.cueenswitch);
+        legend(eventnames(conds_cue));
 
-    figure('Name','ft_multiplotER: erf_clean.targetchstay, erf_clean.targetchswitch, erf_clean.targetenstay, erf_clean.targetenswitch');
-    cfg.xlim = [-0.2 0.75];
-    ft_multiplotER(cfg, erf_clean.targetchstay, erf_clean.targetchswitch, erf_clean.targetenstay, erf_clean.targetenswitch);
-    legend(eventnames(conds_target));
+        figure('Name','ft_multiplotER: erf_clean.targetchstay, erf_clean.targetchswitch, erf_clean.targetenstay, erf_clean.targetenswitch');
+        cfg.xlim = [-0.2 0.75];
+        ft_multiplotER(cfg, erf_clean.targetchstay, erf_clean.targetchswitch, erf_clean.targetenstay, erf_clean.targetenswitch);
+        legend(eventnames(conds_target));
+    end
 
 
     %% Calc global averages across all sensors (GFP = global field power)

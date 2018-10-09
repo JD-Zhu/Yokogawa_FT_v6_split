@@ -8,7 +8,7 @@ stats_ERF: grand average & stats on ERF
 = Source-level analysis pipeline =
 
 Yokogawa_FT_v6
-source_v1: coreg with custom-matched structrual MRI (using MEMES.m), estimation of brain activity in selected ROIs (Method: beamforming)
+source_v1: coreg with custom-matched structrual MRI (using MEMES.m), reconstruction of brain activity in selected ROIs (Method: beamforming)
 stats_ROI: grand average & stats on estimated ROI activities
 
 
