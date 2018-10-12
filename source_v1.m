@@ -21,11 +21,14 @@ function source_v1
     % = Save files =
     
     % filename for saving the beamformer output (to avoid running the whole thing every time)
-    Beamformer_output_file = 'beamformer_ChineseMRIdatabase.mat'; 
+    Beamformer_output_filename = 'beamformer_ChineseMRIdatabase.mat'; 
     % To save a different version of beamformer results (e.g. when using 
     % a new set of ERF outputs), simply change this filename.
     % Similarly, to load a previous version of beamformer results,
     % change this filename accordingly.
+    
+    % filename for saving the ROI activity (stored in ResultsFolder_ROI for all subjects)
+    ROI_output_filename = '_ROI.mat';
 
     
     %%
@@ -208,7 +211,8 @@ function source_v1
 
 
         %% if haven't already done the beamforming before, do it now & save a copy
-        if (exist([pwd '\' Beamformer_output_file], 'file') ~= 2)    
+        Beamformer_output_file = [pwd '\' Beamformer_output_filename];
+        if (exist(Beamformer_output_file, 'file') ~= 2)    
 
             %% Step 3: prepare sourcemodel & leadfield
 
@@ -393,151 +397,156 @@ function source_v1
         % Here we use the atlas to create VEs (virtual sensors) - 1 VE represents 1 ROI
 
         if RUN_ROI_ANALYSIS
-            % load required files
-            temp = load([templates_dir, 'standard_sourcemodel3d5mm']);
-            template_sourcemodel = temp.sourcemodel;
-                
-            temp = load(Beamformer_output_file);
-            sourcemodel = temp.sourcemodel;
-            source_cue_combined = temp.source_cue_combined;
-            source_target_combined = temp.source_target_combined;
             
-            
-            % Load Atlas (contains parcellation of brain into regions/tissues/parcels)
-            atlas = ft_read_atlas(fullfile(templates_dir, 'ROI_MNI_V4.nii'));
-            atlas = ft_convert_units(atlas, 'cm');% ensure that atlas and template_sourcemodel are expressed in the same units
+            % if haven't done ROI activity reconstruction before, do it now & save a copy
+            ROI_output_file = [ResultsFolder_ROI SubjectID ROI_output_filename];
+            if exist(ROI_output_file, 'file') ~= 2
+                % load required files
+                temp = load([templates_dir, 'standard_sourcemodel3d5mm']);
+                template_sourcemodel = temp.sourcemodel;
 
-            % Interpolate the atlas onto template sourcemodel (10mm grid),
-            % because the atlas may not be at the same resolution as your grid
-            % (e.g. you created a grid with 6000 vertices, but atlas may only have 2000 vertices)
-            cfg                  = [];
-            cfg.interpmethod     = 'nearest';
-            cfg.parameter        = 'tissue';
-            atlas_interpo = ft_sourceinterpolate(cfg, atlas, template_sourcemodel);
-
-            % Add the tissue labels from atlas to our sourcemodel
-            % (each "tissue label" defines one "parcel")
-            sourcemodel.tissue      = atlas_interpo.tissue; 
-            sourcemodel.tissuelabel = atlas_interpo.tissuelabel;
+                temp = load(Beamformer_output_file);
+                sourcemodel = temp.sourcemodel;
+                source_cue_combined = temp.source_cue_combined;
+                source_target_combined = temp.source_target_combined;
 
 
-            % Define our ROIs (can combine multiple parcels together to form one ROI)
-            ROIs = {{'Frontal_Inf_Oper_L';'Frontal_Inf_Tri_L'},{'Frontal_Inf_Oper_R';'Frontal_Inf_Tri_R'},...
-                {'Temporal_Sup_L'},{'Temporal_Sup_R'},{'Supp_Motor_Area_L'},{'Supp_Motor_Area_R'},...
-                {'Cingulum_Ant_L'},{'Cingulum_Ant_R'},{'Frontal_Med_Orb_L'},{'Frontal_Med_Orb_R'}...
-                {'Calcarine_L';'Calcarine_R'}};
+                % Load Atlas (contains parcellation of brain into regions/tissues/parcels)
+                atlas = ft_read_atlas(fullfile(templates_dir, 'ROI_MNI_V4.nii'));
+                atlas = ft_convert_units(atlas, 'cm');% ensure that atlas and template_sourcemodel are expressed in the same units
 
-            ROIs_label = {'LIFG','RIFG','LSTG','RSTG','LSMA','RSMA','LACC','RACC','LdlPFC','RdlPFC','V1'}; %Labels for the groupings
-            % Not too sure about the dlPFC (BA9, 10, 46) <- I chose 'medial orbitofrontal cortex', 
-            % plot seems to include entire middle frontal gyrus and a bit of BA10;
-            % alternatively, we could use 'Frontal_Mid_L' (middle frontal gyrus).
-            % For more precise definition of preSMA, 
-            % try (1) Stanford FIND parcellation (2) HMAT
+                % Interpolate the atlas onto template sourcemodel (10mm grid),
+                % because the atlas may not be at the same resolution as your grid
+                % (e.g. you created a grid with 6000 vertices, but atlas may only have 2000 vertices)
+                cfg                  = [];
+                cfg.interpmethod     = 'nearest';
+                cfg.parameter        = 'tissue';
+                atlas_interpo = ft_sourceinterpolate(cfg, atlas, template_sourcemodel);
+
+                % Add the tissue labels from atlas to our sourcemodel
+                % (each "tissue label" defines one "parcel")
+                sourcemodel.tissue      = atlas_interpo.tissue; 
+                sourcemodel.tissuelabel = atlas_interpo.tissuelabel;
 
 
-            % Make a plot showing the vertices in the parcels on the source model - a good sanity check 
-            %{
-            % to plot selected ROIs only:
-            %ROIs = {{'Frontal_Med_Orb_R'},{'Cingulum_Ant_R'},{'Frontal_Med_Orb_L'},{'Frontal_Med_Orb_R'}};       
+                % Define our ROIs (can combine multiple parcels together to form one ROI)
+                ROIs = {{'Frontal_Inf_Oper_L';'Frontal_Inf_Tri_L'},{'Frontal_Inf_Oper_R';'Frontal_Inf_Tri_R'},...
+                    {'Temporal_Sup_L'},{'Temporal_Sup_R'},{'Supp_Motor_Area_L'},{'Supp_Motor_Area_R'},...
+                    {'Cingulum_Ant_L'},{'Cingulum_Ant_R'},{'Frontal_Med_Orb_L'},{'Frontal_Med_Orb_R'}...
+                    {'Calcarine_L';'Calcarine_R'}};
 
-            figure('Name','Position of Points','NumberTitle','off'); hold on;
-            ft_plot_vol(headmodel,  'facecolor', 'cortex', 'edgecolor', 'none','facealpha',0.4);
-            hold on;
+                ROIs_label = {'LIFG','RIFG','LSTG','RSTG','LSMA','RSMA','LACC','RACC','LdlPFC','RdlPFC','V1'}; %Labels for the groupings
+                % Not too sure about the dlPFC (BA9, 10, 46) <- I chose 'medial orbitofrontal cortex', 
+                % plot seems to include entire middle frontal gyrus and a bit of BA10;
+                % alternatively, we could use 'Frontal_Mid_L' (middle frontal gyrus).
+                % For more precise definition of preSMA, 
+                % try (1) Stanford FIND parcellation (2) HMAT
 
-            % draw the ROIs
-            parcel_vertices = [];
-            for e = 1:length(ROIs)
-                indx_pos = [];
-                for region = find(ismember(sourcemodel.tissuelabel, char(ROIs{e})))
-                    % Get atlas points
-                    indx = (find(sourcemodel.tissue == region));
-                    for vol = 1:length(indx)
-                        indx_pos_temp(vol,:) = sourcemodel.pos(indx(vol),:); % take the warped coords
+
+                % Make a plot showing the vertices in the parcels on the source model - a good sanity check 
+                %{
+                % to plot selected ROIs only:
+                %ROIs = {{'Frontal_Med_Orb_R'},{'Cingulum_Ant_R'},{'Frontal_Med_Orb_L'},{'Frontal_Med_Orb_R'}};       
+
+                figure('Name','Position of Points','NumberTitle','off'); hold on;
+                ft_plot_vol(headmodel,  'facecolor', 'cortex', 'edgecolor', 'none','facealpha',0.4);
+                hold on;
+
+                % draw the ROIs
+                parcel_vertices = [];
+                for e = 1:length(ROIs)
+                    indx_pos = [];
+                    for region = find(ismember(sourcemodel.tissuelabel, char(ROIs{e})))
+                        % Get atlas points
+                        indx = (find(sourcemodel.tissue == region));
+                        for vol = 1:length(indx)
+                            indx_pos_temp(vol,:) = sourcemodel.pos(indx(vol),:); % take the warped coords
+                        end
+                        indx_pos = vertcat(indx_pos, indx_pos_temp);
                     end
-                    indx_pos = vertcat(indx_pos, indx_pos_temp);
+                    ft_plot_mesh(indx_pos, 'vertexcolor','k', 'vertexsize',20); hold on; drawnow; pause(0.2);
+                    title(sourcemodel.tissuelabel(region), 'Interpreter', 'none');
+                    parcel_vertices.(ROIs_label{e}) = indx_pos; %creates a struct with the vertices for each ROI being used. Might be useful at some point
                 end
-                ft_plot_mesh(indx_pos, 'vertexcolor','k', 'vertexsize',20); hold on; drawnow; pause(0.2);
-                title(sourcemodel.tissuelabel(region), 'Interpreter', 'none');
-                parcel_vertices.(ROIs_label{e}) = indx_pos; %creates a struct with the vertices for each ROI being used. Might be useful at some point
-            end
-            %}
+                %}
 
 
-            %% Create VE for each ROI
+                %% Create VE for each ROI
 
-            % Each cycle deals with one ROI
-            for k = 1:length(ROIs)
-                ROI_name = ROIs_label{k};
+                % Each cycle deals with one ROI
+                for k = 1:length(ROIs)
+                    ROI_name = ROIs_label{k};
 
-                % for this ROI, find a list of vertices that belong to it, and
-                % extract the spatial filter for each vertex in cue window & target window
-                vertices_all = []; % will hold a single list of all vertices (from all parcels belonging to this ROI)
-                for j = 1:length(ROIs{k})
-                    indx        = find(ismember(sourcemodel.tissuelabel, ROIs{k}{j})); % find index of the required tissue label
-                    vertices    = find(sourcemodel.tissue == indx); % find vertices that belong to this tissue label
-                    % add vertices from the current parcel to the overall list
-                    vertices_all = [vertices_all; vertices];
-                end
-                % for each vertex, get the spatial filter (i.e. set of weights) for it
-                vertices_filters_cue = cat(1, source_cue_combined.avg.filter{vertices_all}); 
-                vertices_filters_target = cat(1, source_target_combined.avg.filter{vertices_all});
-
-
-                % create virtual sensor for this ROI in cue window
-                if (strcmp(VE_METHOD, 'centroid'))
-                    VE = create_virtual_sensor_Centroid(ROI_name, vertices_all, vertices_filters_cue, erf_cue_combined, erf, conds_cue, headmodel, sourcemodel);
-                else
-                    VE = create_virtual_sensor_SVD(ROI_name, vertices_filters_cue, erf_cue_combined, erf, conds_cue); 
-                end
-
-                if ~isempty(VE) % successful
-                    ROI_activity.(ROI_name) = VE;
-                else
-                    fprintf(['No solution for ', ROI_name, ' in cue window.']);
-                end
-
-                % create virtual sensor for this ROI in target window
-                if (strcmp(VE_METHOD, 'centroid'))
-                    VE = create_virtual_sensor_Centroid(ROI_name, vertices_all, vertices_filters_target, erf_target_combined, erf, conds_target, headmodel, sourcemodel);
-                else
-                    VE = create_virtual_sensor_SVD(ROI_name, vertices_filters_target, erf_target_combined, erf, conds_target);
-                end
-
-                if ~isempty(VE) % successful
-                    for j = conds_target  % append to existing cue-window results
-                        ROI_activity.(ROI_name).(eventnames{j}) = VE.(eventnames{j});
+                    % for this ROI, find a list of vertices that belong to it, and
+                    % extract the spatial filter for each vertex in cue window & target window
+                    vertices_all = []; % will hold a single list of all vertices (from all parcels belonging to this ROI)
+                    for j = 1:length(ROIs{k})
+                        indx        = find(ismember(sourcemodel.tissuelabel, ROIs{k}{j})); % find index of the required tissue label
+                        vertices    = find(sourcemodel.tissue == indx); % find vertices that belong to this tissue label
+                        % add vertices from the current parcel to the overall list
+                        vertices_all = [vertices_all; vertices];
                     end
-                else
-                    fprintf(['No solution for ', ROI_name, ' in target window.']);
+                    % for each vertex, get the spatial filter (i.e. set of weights) for it
+                    vertices_filters_cue = cat(1, source_cue_combined.avg.filter{vertices_all}); 
+                    vertices_filters_target = cat(1, source_target_combined.avg.filter{vertices_all});
+
+
+                    % create virtual sensor for this ROI in cue window
+                    if (strcmp(VE_METHOD, 'centroid'))
+                        VE = create_virtual_sensor_Centroid(ROI_name, vertices_all, vertices_filters_cue, erf_cue_combined, erf, conds_cue, headmodel, sourcemodel);
+                    else
+                        VE = create_virtual_sensor_SVD(ROI_name, vertices_filters_cue, erf_cue_combined, erf, conds_cue); 
+                    end
+
+                    if ~isempty(VE) % successful
+                        ROI_activity.(ROI_name) = VE;
+                    else
+                        fprintf(['No solution for ', ROI_name, ' in cue window.']);
+                    end
+
+                    % create virtual sensor for this ROI in target window
+                    if (strcmp(VE_METHOD, 'centroid'))
+                        VE = create_virtual_sensor_Centroid(ROI_name, vertices_all, vertices_filters_target, erf_target_combined, erf, conds_target, headmodel, sourcemodel);
+                    else
+                        VE = create_virtual_sensor_SVD(ROI_name, vertices_filters_target, erf_target_combined, erf, conds_target);
+                    end
+
+                    if ~isempty(VE) % successful
+                        for j = conds_target  % append to existing cue-window results
+                            ROI_activity.(ROI_name).(eventnames{j}) = VE.(eventnames{j});
+                        end
+                    else
+                        fprintf(['No solution for ', ROI_name, ' in target window.']);
+                    end
                 end
+
+                save(ROI_output_file, 'ROI_activity');
+
+                % Plot the source activity at each ROI
+                %{
+                for k = 1:length(ROIs)
+                    ROI_name = (ROIs_label{k});
+
+                    % plot for cue window
+                    figure; hold on; 
+                    title(['Cue window: ' ROI_name]);
+                    for j = conds_cue
+                       plot(ROI_activity.(ROI_name).(eventnames{j}).time, ROI_activity.(ROI_name).(eventnames{j}).avg);
+                       xlim([-0.2 0.75]); % epoch was [-1 1], we only want to plot [-0.2 0.75]
+                    end
+                    legend(eventnames(conds_cue));
+
+                    % plot for target window
+                    figure; hold on; 
+                    title(['Target window: ' ROI_name]);
+                    for j = conds_target
+                       plot(ROI_activity.(ROI_name).(eventnames{j}).time, ROI_activity.(ROI_name).(eventnames{j}).avg);
+                       xlim([-0.2 0.75]); % epoch was [-1 1], we only want to plot [-0.2 0.75]
+                    end
+                    legend(eventnames(conds_target));
+                end
+                %}
             end
-
-            save([ResultsFolder_ROI SubjectID '_ROI.mat'], 'ROI_activity');
-
-            % Plot the source activity at each ROI
-            %{
-            for k = 1:length(ROIs)
-                ROI_name = (ROIs_label{k});
-
-                % plot for cue window
-                figure; hold on; 
-                title(['Cue window: ' ROI_name]);
-                for j = conds_cue
-                   plot(ROI_activity.(ROI_name).(eventnames{j}).time, ROI_activity.(ROI_name).(eventnames{j}).avg);
-                   xlim([-0.2 0.75]); % epoch was [-1 1], we only want to plot [-0.2 0.75]
-                end
-                legend(eventnames(conds_cue));
-
-                % plot for target window
-                figure; hold on; 
-                title(['Target window: ' ROI_name]);
-                for j = conds_target
-                   plot(ROI_activity.(ROI_name).(eventnames{j}).time, ROI_activity.(ROI_name).(eventnames{j}).avg);
-                   xlim([-0.2 0.75]); % epoch was [-1 1], we only want to plot [-0.2 0.75]
-                end
-                legend(eventnames(conds_target));
-            end
-            %}
 
             % Statistical analysis on the ROI activities will be carried out in stats_ROI.m
         end

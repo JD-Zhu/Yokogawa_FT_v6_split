@@ -252,7 +252,7 @@ for i = 1:length(SubjectIDs)
         
         
         % SAVE all relevant variables from the workspace
-        save([ResultsFolder SubjectID S3_output_filename], 'SubjectFolder', ...
+        save(S3_output_file, 'SubjectFolder', ...
             'erf_clean', 'erf_cue_combined', 'erf_target_combined'); %'erf',       
     end
 
