@@ -50,7 +50,7 @@ global SubjectID;
 % find all subject folders containing raw MEG recording
 SubjectIDs = dir([DataFolder 'M*']);
 SubjectIDs = {SubjectIDs.name}; % extract the names into a cell array
-SubjectIDs = {'M03-AG-2784'}; % or manually select which subjects to process
+%SubjectIDs = {'M03-AG-2784'}; % or manually select which subjects to process
 
 
 %% Stage 1: preprocessing & downsampling
@@ -64,9 +64,9 @@ for i = 1:length(SubjectIDs)
     
     % if haven't already processed this stage before, do it now & save a copy
     if (exist(S1_output_file, 'file') ~= 2)    
-        %[all_blocks, trialinfo_b] = preprocessing(SubjectFolder);
-    %TEMP: reject trigger artefact on raw continuous data
-    [all_blocks, trialinfo_b] = preprocessing2(SubjectFolder);
+        [all_blocks, trialinfo_b] = preprocessing(SubjectFolder);
+        %TEMP: reject trigger artefact on raw continuous data
+        %[all_blocks, trialinfo_b] = preprocessing2(SubjectFolder);
 
         % downsample the data for saving
         %all_blocks.time(1:end) = all_blocks.time(1); % this avoids numeric round off issues in the time axes upon resampling
@@ -188,9 +188,9 @@ for i = 1:length(SubjectIDs)
         end
 
         % delete vars that are no longer needed (to clear up some memory)
-        clear all_blocks;
-        clear all_blocks_clean;
-        clear trialinfo_b;
+        %clear all_blocks;
+        %clear all_blocks_clean;
+        %clear trialinfo_b;
 
         %save([SubjectFolder 'before_computing_erf.mat'], 'trials', 'trials_clean', 'response_comp');
 
@@ -224,30 +224,28 @@ for i = 1:length(SubjectIDs)
         
         % remove trigger artefact on averaged ERF
         if REMOVE_TRIGGER_ARTEFACT_ON_AVG_ERF
+            % here we use remove_artefact_ICA just to compute the trigger_comp
+            % (we ignore the cleaned data it returns),
+            % then manually call ft_rejectcomponent on the avg ERF for each cond
             load([ResultsFolder 'lay.mat']);
-            [all_blocks_clean, trigger_comp] = remove_artefact_ICA(all_blocks_clean, events_allBlocks, lay, 'trigger');
+            [~, trigger_comp] = remove_artefact_ICA(all_blocks_clean, events_allBlocks, lay, 'trigger');
             
-            %TODO:
-            % we need to modify remove_artefact_ICA() to process ERF (output of ft_timelockanalysis) 
-            % instead of all_block_clean (output of ft_preprocessing)
-            
-            % Sln:
             % ft_rejectcomponent automatically converts timelock data to raw (and then
             % converts back) if you pass in one condition at a time.
             % the "cov" and "var" fields get removed, but we only need "cov" from 
             % erf_cue_combined & erf_target_combined anyway, not from the indi conditions.
 
-            data = erf_clean.cuechstay;
+            for j = 1:length(eventnames)
+                cfg              = [];
+                cfg.demean       = 'no';
+                cfg.component    = 1:1; % project out the 1st principal component
+                erf_clean.(eventnames{j}) = ft_rejectcomponent(cfg, trigger_comp, erf_clean.(eventnames{j}));
+            end
 
-            cfg              = [];
-            cfg.demean       = 'no';
-            cfg.component    = 1:1; % project out the 1st principal component
-            data_clean = ft_rejectcomponent(cfg, artefact_comp, data);
-
-            % ONLY REMAINING QUESTION: 
-            % Does this make the previously-computed covmatrix invalid
-            % (because it was computed w/o artefact rejection)?  
-            %
+            % Note: the covmatrix computed above (in compute_ERF.m) 
+            % should still be valid, because it is not based on any data 
+            % containing the trigger artefact (we modified cfg.covariancewindow
+            % to 0~650ms following cue onset)
         end
         
         
@@ -263,9 +261,9 @@ for i = 1:length(SubjectIDs)
     %load([ResultsFolder 'lay.mat']); 
     
     if (CALC_UNCLEANED_ERF)
-        %plot_ERF(erf, erf_clean, lay, true);
+        %plot_ERF(erf, erf_clean, lay, true, true);
     else % clean erf only
-        plot_ERF([], erf_clean, lay, false);
+        %plot_ERF([], erf_clean, lay, false, false);
     end
     
 end
