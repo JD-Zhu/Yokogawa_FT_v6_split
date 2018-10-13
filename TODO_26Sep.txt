@@ -14,7 +14,7 @@ Opt (1):
 
 Go back to projecting out on ave ERF:
 -   Finish script to remove trigger on ave ERF
--   Check single-subject GFPz - see if 'trigger spike' is gone
+-   Check single-subject GFPs - see if 'trigger spike' is gone
  A: mostly gone, still visible on a few subjects (sometimes affecting one particular cond more than other conds). I think overall it's acceptable.
 However, ERF results show no effects whatsoever;
          ROI results show cue_interaction (larger sw$ in L1) in RSMA.

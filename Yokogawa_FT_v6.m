@@ -24,8 +24,8 @@ clear all % disable this line if u want breakpoints to work
 CHANNEL_REPAIR = false; % repair bad/rejected channels?
 CALC_UNCLEANED_ERF = false; % calculate uncleaned erf? (for quality check of response-component rejection)
 
-REMOVE_TRIGGER_ARTEFACT_ON_INDI_EPOCHS = false; % remove trigger-leak artefact? (spike around 55ms before cue onset & target onset)
-REMOVE_TRIGGER_ARTEFACT_ON_AVG_ERF = true;
+REMOVE_TRIGGER_ARTEFACT_ON_INDI_EPOCHS = true; % remove trigger-leak artefact? (spike around 55ms before cue onset & target onset)
+REMOVE_TRIGGER_ARTEFACT_ON_AVG_ERF = false;
 
 %%
 % run the #define section
@@ -263,7 +263,7 @@ for i = 1:length(SubjectIDs)
     if (CALC_UNCLEANED_ERF)
         %plot_ERF(erf, erf_clean, lay, true, true);
     else % clean erf only
-        %plot_ERF([], erf_clean, lay, false, false);
+        plot_ERF([], erf_clean, lay, false, false);
     end
     
 end
