@@ -54,6 +54,7 @@ function plot_ERF (erf, erf_clean, lay, plot_uncleaned, plot_multiplot)
     %% Calc global averages across all sensors (GFP = global field power)
     cfg        = [];
     cfg.method = 'power';
+    %cfg.channel = alldata.label([81:89]); % trigger spike is present in all of these channels: 81-89
     for j = 1:length(eventnames)
         erf_clean_GFP.(eventnames{j}) = ft_globalmeanfield(cfg, erf_clean.(eventnames{j}));
     end
