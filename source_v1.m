@@ -15,13 +15,13 @@ function source_v1
     
     % which version of MEMES to use?
     % (MEMES1 - for comparability with earlier results; MEMES3 - for Chinese MRI database)
-    MEMES_VERSION = 'MEMES3';
+    MEMES_VERSION = 'MEMES1';
 
     
     % = Save files =
     
     % filename for saving the beamformer output (to avoid running the whole thing every time)
-    Beamformer_output_filename = 'beamformer_ChineseMRIdatabase.mat'; 
+    Beamformer_output_filename = 'beamformer_removeChannels81-89.mat'; 
     % To save a different version of beamformer results (e.g. when using 
     % a new set of ERF outputs), simply change this filename.
     % Similarly, to load a previous version of beamformer results,

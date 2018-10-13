@@ -1,6 +1,17 @@
-TODO:
+TODO - Mon 15 Oct 2018:
 
-[DONE] 1. Test Robert's MEMES3 script (by running source_v1).
+1. We found out the trigger leak was present in all of channels 81-89!
+Rerun with these channels removed (scripts have already been modified, just pull from origin/master, then run Yokogawa -> source_v1 -> stats_ROI)
+
+ERF results: absolutely nothing
+ROI results: 
+
+2. If this doesn't work, then try Paul's method (replace the -60~-45ms interval using an inverse/shuffled version of -75~-60ms), but only do this for channels 81-89 (!!) No need to touch the other channels as they are not affected by trigger leak.
+
+
+= Done =
+
+1. Test Robert's MEMES3 script (by running source_v1).
 
 Problems:
 (1) subjects with 2 bad coils show upside-down sensors (M08, M10) 

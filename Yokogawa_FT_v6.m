@@ -24,8 +24,10 @@ clear all % disable this line if u want breakpoints to work
 CHANNEL_REPAIR = false; % repair bad/rejected channels?
 CALC_UNCLEANED_ERF = false; % calculate uncleaned erf? (for quality check of response-component rejection)
 
-REMOVE_TRIGGER_ARTEFACT_ON_INDI_EPOCHS = true; % remove trigger-leak artefact? (spike around 55ms before cue onset & target onset)
+REMOVE_TRIGGER_ARTEFACT_ON_INDI_EPOCHS = false; % remove trigger-leak artefact? (spike around 55ms before cue onset & target onset)
 REMOVE_TRIGGER_ARTEFACT_ON_AVG_ERF = false;
+REMOVE_TRIGGER_LEAK_CHANNELS = true; % remove all channels affected by trigger leak (81-89)?
+
 
 %%
 % run the #define section
@@ -161,6 +163,12 @@ for i = 1:length(SubjectIDs)
             [all_blocks_clean, trigger_comp] = remove_artefact_ICA(all_blocks_clean, events_allBlocks, lay, 'trigger');
         end
 
+        if (REMOVE_TRIGGER_LEAK_CHANNELS)
+            cfg         = [];
+            cfg.channel = {'all', '-AG083', '-AG087', '-AG088', '-AG082', '-AG084', '-AG086', '-AG081', '-AG085', '-AG089'}; % {'MEG'};
+            all_blocks_clean = ft_selectdata(cfg, all_blocks_clean);
+        end
+
         % perform channel repair if needed
         if (CHANNEL_REPAIR)
             load([ResultsFolder 'neighbours.mat']);
@@ -263,7 +271,7 @@ for i = 1:length(SubjectIDs)
     if (CALC_UNCLEANED_ERF)
         %plot_ERF(erf, erf_clean, lay, true, true);
     else % clean erf only
-        plot_ERF([], erf_clean, lay, false, false);
+        %plot_ERF([], erf_clean, lay, false, false);
     end
     
 end

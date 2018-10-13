@@ -69,7 +69,7 @@ fprintf('\n= COMPUTING & PLOTTING CROSS-SUBJECT AVERAGES =\n');
 
 % CALCULATE the grand average (across all subjects) for each condition
 cfg = [];
-cfg.channel   = {'all', '-AG083', '-AG087', '-AG088', '-AG082', '-AG084', '-AG086'}; % remove sensors suffering from high-freq noise & trigger leaks
+cfg.channel   = {'all', '-AG083', '-AG087', '-AG088', '-AG082', '-AG084', '-AG086', '-AG081', '-AG085', '-AG089'}; % remove sensors suffering from high-freq noise & trigger leaks
 cfg.latency   = 'all';
 cfg.parameter = 'avg';
 for j = 1:length(eventnames_8)
@@ -145,7 +145,7 @@ xlim([-0.2 0.75]);
 fprintf('\n= STATS: CLUSTER-BASED PERMUTATION TESTS =\n');
 
 cfg = [];
-cfg.channel = {'all', '-AG083', '-AG087', '-AG088', '-AG082', '-AG084', '-AG086'}; % {'MEG'};
+cfg.channel = {'all', '-AG083', '-AG087', '-AG088', '-AG082', '-AG084', '-AG086', '-AG081', '-AG085', '-AG089'}; % {'MEG'};
 load([ResultsFolder 'neighbours.mat']); % this is the sensor layout - it's the same for all subjects (even same across experiments). So just prepare once & save, then load here
 cfg.neighbours = neighbours;  % same as defined for the between-trials experiment
 
@@ -272,7 +272,7 @@ effect_target_interaction = length(find(target_interaction.mask))
 effect_target_lang = length(find(target_lang.mask))
 effect_target_ttype = length(find(target_ttype.mask))
 
-save([ResultsFolder 'stats.mat'], 'cue_interaction', 'cue_lang', 'cue_ttype', 'target_interaction', 'target_lang', 'target_ttype');
+%save([ResultsFolder 'stats.mat'], 'cue_interaction', 'cue_lang', 'cue_ttype', 'target_interaction', 'target_lang', 'target_ttype');
 
 
 %% Plotting: use ft_clusterplot & ft_topoplot
