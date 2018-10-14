@@ -1,9 +1,9 @@
 TODO - Mon 15 Oct 2018:
 
 1. We found out the trigger leak was present in all of channels 81-89!
-Rerun with these channels removed (scripts have already been modified, just pull from origin/master, then run Yokogawa -> source_v1 -> stats_ROI)
+Rerun with these channels removed (scripts have already been modified): Yokogawa -> source_v1 -> stats_ROI
 
-ERF results: absolutely nothing
+ERF results: absolutely nothing, but we can always use the old verion of ERFs (w/o covmatrix) - it's valid because all of channels 81-89 were removed, so we can be confident that the effect is real
 ROI results: 
 
 2. If this doesn't work, then try Paul's method (replace the -60~-45ms interval using an inverse/shuffled version of -75~-60ms), but only do this for channels 81-89 (!!) No need to touch the other channels as they are not affected by trigger leak.

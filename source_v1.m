@@ -34,7 +34,7 @@ function source_v1
     %%
     % NOTE: always run from the "analysis_scripts" folder, to ensure all relative
     % paths work as expected
-    cd('D:\Judy\Exp1\6_MEG-data\analysis_scripts\Yokogawa_FT_v6_split');
+    %cd('D:\Judy\Exp1\6_MEG-data\analysis_scripts\Yokogawa_FT_v6_split');
 
     addpath(pwd); % allow access to scripts in this folder even after we cd into each SubjectFolder
     %addpath([pwd '\\coreg-master\\']); % allow access to coreg scripts
@@ -56,7 +56,7 @@ function source_v1
 
 
     %% each cycle processes one subject
-    for h = 1:length(SubjectFolders)
+    for h = 5:length(SubjectFolders)
 
         SubjectID = SubjectFolders{h};
         SubjectFolder = [DataFolder, '\\', SubjectID];
@@ -77,11 +77,21 @@ function source_v1
         hspfile = [filename_base, '.hsp'];
         confile = [filename_base, '_B1.con'];
         mrkfile = [filename_base, '_ini.mrk']; % choose which marker file to use
+        
+        % specify the bad marker coils for each subject
+        bad_coil = ''; 
+        if strcmp(SubjectID, 'M08-YL-2763') || strcmp(SubjectID, 'M10-SS-2764')
+            bad_coil = {'LPFwh', 'RPFblack'};
+        elseif strcmp(SubjectID, 'M20-FG-2814')
+            bad_coil = {'PFblue'};
+        end
+
                 
         % check which version of MEMES to use
         if strcmp(MEMES_VERSION, 'MEMES1')
-            % location of your MRI database (consistent relative path across computers)  
-            MRI_folder = [pwd '\\..\\..\\..\\..\\MRI_databases\\HCP\\']; % HCP database
+            % location of your MRI database (consistent relative path across computers)
+            %MRI_folder = [pwd '\\..\\..\\..\\..\\MRI_databases\\HCP\\']; % HCP database
+            MRI_folder = 'H:\No-Backup\MRI_databases\HCP\'; % HCP database
             coreg_output = [pwd '\\MEMES\\']; % where to store the output from MEMES
             
             % if headmodel etc haven't been generated, do this now
@@ -92,7 +102,10 @@ function source_v1
                 initial_mri_realign = temp.initial_mri_realign;
                 path_to_MRI_library = MRI_folder;
 
-                MEMES(pwd,coreg_output,elpfile,hspfile,confile,mrkfile,path_to_MRI_library,mesh_library,initial_mri_realign);
+                MEMES(pwd,coreg_output,elpfile,hspfile,confile,mrkfile,path_to_MRI_library,...
+                    mesh_library,initial_mri_realign,bad_coil);
+                %MEMES2(pwd, elpfile, hspfile, confile, mrkfile,path_to_MRI_library,...
+                %    mesh_library,initial_mri_realign, bad_coil, 'best', 1)
 
                 %mrifile = 'single_subj_T1.nii'; % use the template that comes with FT
                 % don't use the dummy .mri file created by ME160 - it doesn't contain anything
@@ -105,9 +118,18 @@ function source_v1
             headmodel = temp.headmodel_singleshell;
             temp = load ([coreg_output 'grad_trans.mat']);
             grads = temp.grad_trans;
-            temp = load ([coreg_output 'mri_realigned_transformed.mat']);
-            mri = temp.mri_realigned;
-        
+            
+            if ~exist([coreg_output 'mri_realigned_transformed.mat'], 'file')
+                temp = load ([coreg_output 'mri_realigned.mat']);
+                temp1 = load ([coreg_output 'trans_matrix.mat']);
+                mri_realigned = ft_transform_geometry(temp1.trans_matrix, temp.mri_realigned);
+                save ([coreg_output 'mri_realigned_transformed.mat'], 'mri_realigned');
+                mri = mri_realigned;
+            else
+                temp = load ([coreg_output 'mri_realigned_transformed.mat']);
+                mri = temp.mri_realigned;
+            end
+            
         elseif strcmp(MEMES_VERSION, 'MEMES3')
             % location of your MRI database (consistent relative path across computers)  
             MRI_folder = [pwd '\\..\\..\\..\\..\\MRI_databases\\SLIM_completed\\']; % SLIM Chinese database
@@ -115,14 +137,6 @@ function source_v1
             
             % if headmodel etc haven't been generated, do this now
             if ~exist([coreg_output 'headmodel.mat'], 'file')
-                % specify the bad marker coils for each subject
-                bad_coil = ''; 
-                if strcmp(SubjectID, 'M08-YL-2763') || strcmp(SubjectID, 'M10-SS-2764')
-                    bad_coil = {'LPFwh', 'RPFblack'};
-                elseif strcmp(SubjectID, 'M20-FG-2814')
-                    bad_coil = {'PFblue'};
-                end
-                
                 MEMES3(pwd, elpfile, hspfile, confile, mrkfile, MRI_folder,...
                     bad_coil, 'best', [0.99:0.01:1.01], 5, 'no')
                 

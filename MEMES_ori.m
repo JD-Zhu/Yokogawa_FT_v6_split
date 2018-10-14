@@ -16,8 +16,6 @@
 % - hsp_points      = number of points for downsampling the headshape (try
 % 100-200) -> option no longer avail, specified by magic number
 % - scalpthreshold  = threshold for scalp extraction (try 0.05 if unsure) -> option no longer avail, specified by magic number
-% - bad_coil        = list of bad coils (up to length of 2). Enter as:
-%                         {LPAred','RPAyel','PFblue','LPFwh','RPFblack'}
 %
 % OUTPUTS: (via save)
 % - grad_trans              = correctly aligned sensor layout
@@ -34,31 +32,15 @@
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function MEMES(dir_name,coreg_output,elpfile,hspfile,confile,mrkfile,path_to_MRI_library,mesh_library,initial_mri_realign,bad_coil)
+function MEMES(dir_name,coreg_output,elpfile,hspfile,confile,mrkfile,path_to_MRI_library,mesh_library,initial_mri_realign)
 
-    fprintf('\nThis is MEMES.m\n');
+    fprintf('\nCalling MEMES.m\n');
     
-    %% Check inputs
-    disp('Performing input check');
-    assert(length(bad_coil)<3,'You need at least 3 good coils for accurate alignment. Also make sure you enter bad_coil strings in curly brackets {}');
-    % If Path to MRI library doesn't end with / or \ throw up and error
-    if ismember(path_to_MRI_library(end),['/','\']) == 0
-        error('!!! Path to MRI library must end with / or \ !!!');
+    if ~exist(coreg_output)
+        mkdir(coreg_output);
     end
 
-    % Check if bad_coils are entered correctly
-    if strcmp(bad_coil,'')
-        disp('No bad coils marked');
-    else
-        for check1 = 1:length(bad_coil)
-            if ismember(bad_coil{check1},{'','LPAred','RPAyel','PFblue','LPFwh','RPFblack'}) == 0
-                error('!!! Please enter bad_coils correctly in the form {LPAred,RPAyel,PFblue,LPFwh,RPFblack} !!!');
-            end
-        end
-    end
-
-    
-    %% list of HCP subjects
+    % list of HCP subjects
     subject = {'100307';'102816';'104012';'105923';'106521';'108323';...
         '109123';'111514';'112920';'113922';'116524';'116726';'125525';...
         '133019';'140117';'146129';'149741';'151526';'153732';'154532';...
@@ -76,11 +58,6 @@ function MEMES(dir_name,coreg_output,elpfile,hspfile,confile,mrkfile,path_to_MRI
 
     nii_filename = '\\MEG\\anatomy\\T1w_acpc_dc_restore.nii'; % same for all subjects
 
-    % make folder to contain the MEMES output
-    if ~exist(coreg_output)
-        mkdir(coreg_output);
-    end
-
     % CD to right place
     cd(dir_name); fprintf('\n CDd to the right place\n');
 
@@ -92,82 +69,24 @@ function MEMES(dir_name,coreg_output,elpfile,hspfile,confile,mrkfile,path_to_MRI
     % Read the grads from the con file
     grad_con                    = ft_read_sens(confile); %in cm, load grads
 
-    % Read mrk_file
-    mrk      = ft_read_headshape(mrkfile,'format','yokogawa_mrk');
-    mrk      = ft_convert_units(mrk,'cm'); %in cm
-  
-    %% Perform Realignment Using Paul's Fancy Functions
-    if strcmp(bad_coil,'')
-        disp('NO BAD MARKERS');
-        markers                     = mrk.fid.pos([2 3 1 4 5],:);%reorder mrk to match order in shape
-        [R,T,Yf,Err]                = rot3dfit(markers,shape.fid.pnt(4:end,:));%calc rotation transform
-        meg2head_transm             = [[R;T]'; 0 0 0 1];%reorganise and make 4*4 transformation matrix
+    % Read the mrk file
+    mrk                         = ft_read_headshape(mrkfile,'format','yokogawa_mrk');
+    markers                     = mrk.fid.pos([2 3 1 4 5],:);%reorder mrk to match order in shape
+    [R,T,Yf,Err]                = rot3dfit(markers,shape.fid.pnt(4:end,:));%calc rotation transform
+    meg2head_transm             = [[R;T]'; 0 0 0 1];%reorganise and make 4*4 transformation matrix
 
-        disp('Performing re-alignment');
-        grad_trans                  = ft_transform_geometry_PFS_hacked(meg2head_transm,grad_con); %Use my hacked version of the ft function - accuracy checking removed not sure if this is good or not
-        grad_trans.fid              = shape; %add in the head information
-        save ([coreg_output 'grad_trans.mat'], 'grad_trans');
-
-    % Else if there is a bad marker
-    else
-        fprintf(''); disp('TAKING OUT BAD MARKER(S)');
-
-        badcoilpos = [];
-
-        % Identify the bad coil
-        for num_bad_coil = 1:length(bad_coil)
-            pos_of_bad_coil = find(ismember(shape.fid.label,bad_coil{num_bad_coil}))-3;
-            badcoilpos(num_bad_coil) = pos_of_bad_coil;
-        end
-
-        % Re-order mrk file to match elp file
-        markers               = mrk.fid.pos([2 3 1 4 5],:);%reorder mrk to match order in shape
-        % Now take out the bad marker(s) when you realign
-        markers(badcoilpos,:) = [];
-
-        % Get marker positions from elp file
-        fids_2_use = shape.fid.pnt(4:end,:);
-        % Now take out the bad marker(s) when you realign
-        fids_2_use(badcoilpos,:) = [];
-
-        % If there are two bad coils use the ICP method, if only one use
-        % rot3dfit as usual
-        disp('Performing re-alignment');
-
-        if length(bad_coil) == 2
-            [R, T, err, dummy, info]    = icp(fids_2_use', markers','Minimize', 'point');
-            meg2head_transm             = [[R T]; 0 0 0 1];%reorganise and make 4*4 transformation matrix
-            grad_trans                  = ft_transform_geometry_PFS_hacked(meg2head_transm,grad_con); %Use my hacked version of the ft function - accuracy checking removed not sure if this is good or not
-            grad_trans.fid              = shape; %add in the head information
-        else
-            [R,T,Yf,Err]                = rot3dfit(markers,fids_2_use);%calc rotation transform
-            meg2head_transm             = [[R;T]'; 0 0 0 1];%reorganise and make 4*4 transformation matrix
-            grad_trans                  = ft_transform_geometry_PFS_hacked(meg2head_transm,grad_con); %Use my hacked version of the ft function - accuracy checking removed not sure if this is good or not
-            grad_trans.fid              = shape; %add in the head information
-        end
-    end
-
-    % Create figure to view relignment
-    hfig = figure;
-    subplot(2,2,1);ft_plot_headshape(shape);
-    hold on; ft_plot_sens(grad_trans); view([180, 0]);
-    subplot(2,2,2);ft_plot_headshape(shape);
-    hold on; ft_plot_sens(grad_trans); view([-90, 0]);
-    subplot(2,2,3);ft_plot_headshape(shape);
-    hold on; ft_plot_sens(grad_trans); view([0, 0]);
-    hax = subplot(2,2,4);ft_plot_headshape(shape);
-    hold on; ft_plot_sens(grad_trans); view([90, 0]);
-
-    
-    % Get headshape downsampled to 100 points with facial info preserved
-    headshape_downsampled = downsample_headshape_noface(hspfile,100,grad_trans);
-
-    % Rotate sensors and headshape about z-axis
+    % Transform sensors based on the MRKfile
+    grad_trans      = ft_transform_geometry_PFS_hacked(meg2head_transm,grad_con); %Use my hacked version of the ft function - accuracy checking removed not sure if this is good or not
+    grad_trans.fid  = shape; %add in the head information
+    % Rotate about z-axis
     rot180mat       = rotate_about_z(180);
     grad_trans      = ft_transform_geometry(rot180mat,grad_trans);
+
+    % Get headshape downsampled to 100 points with facial info removed
+    headshape_downsampled = downsample_headshape_noface(hspfile,100,grad_trans);
+    % Rotate about z-axis
     headshape_downsampled = ft_transform_geometry(rot180mat,headshape_downsampled);
 
-    
     %% Perform ICP
 
     % Initialise coreg error (ORE) to 1, for all candidate scalp surfaces
@@ -304,8 +223,8 @@ function MEMES(dir_name,coreg_output,elpfile,hspfile,confile,mrkfile,path_to_MRI
     mri_realigned = ft_transform_geometry(trans_matrix, mri_realigned);
     
     % sanity check (plot mri & headmodel together)
-    %ft_determine_coordsys(mri, 'interactive','no'); hold on
-    %ft_plot_vol(headmodel);
+    ft_determine_coordsys(mri, 'interactive','no'); hold on
+    ft_plot_vol(headmodel);
 
 
     figure;ft_plot_headshape(headshape_downsampled) %plot headshape
@@ -686,6 +605,5 @@ function MEMES(dir_name,coreg_output,elpfile,hspfile,confile,mrkfile,path_to_MRI
     end
 
 end
-
 
 

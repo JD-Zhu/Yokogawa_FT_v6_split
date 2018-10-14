@@ -1,0 +1,32 @@
+= Re-running the version before any "TRIGGER artefact removal", removing channels 81-89 =
+
+Aim: hopefully this retains the old effects (because minimum change to the data), but also get rid of trigger spike (because we remove the 9 channels)
+
+In source_v1:
+Using HCP database & MEMES1 - the subjects with bad coils have problems in coreg:
+M08 - see attached pic
+M10
+M20
+
+Check again (brain very tilted to the right):
+M21 - see attached pic
+
+=
+Attempted solution (tried on M08): add the new features from MEMES3 (for handling 2 bad coils) into MEMES1/MEMES2, in order to make 2-bad-coil subjects work with the HCP database:
+
+MEMES1 - copied over the new features (esp for 2 bad coils) from MEMES3
+    >> doesn't work, plots are tilted (hsp & mesh are misaligned)
+
+MEMES2 - copied over the new features (esp for 2 bad coils) from MEMES3
+    >> doesn't work, mesh and grid have the wrong unit (appears tiny when plotted alongside hsp and sensors) & are misaligned with the hsp and sensors
+
+MEMES3 
+    >> doesn't work, as it requires MRI database to be organised in a different format (mesh within each subject folder, etc)
+
+
+
+= Re-running the version before any "TRIGGER artefact removal", removing channels 81-89 =
+
+- Run source_v1 using Chinese database & MEMES3
+- check coreg plots
+- run stats_ROI
