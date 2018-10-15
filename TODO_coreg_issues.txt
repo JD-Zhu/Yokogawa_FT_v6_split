@@ -21,7 +21,7 @@ MEMES2 - copied over the new features (esp for 2 bad coils) from MEMES3
     >> doesn't work, mesh and grid have the wrong unit (appears tiny when plotted alongside hsp and sensors) & are misaligned with the hsp and sensors
 
 MEMES3 
-    >> doesn't work, as it requires MRI database to be organised in a different format (mesh within each subject folder, etc)
+    >> Can use "new HCP library for MEMES3", Rob gave me the link. He noted, however, that this is a new library with different initial realignments and might give different results to the MEMES1 HCP library.
 
 
 

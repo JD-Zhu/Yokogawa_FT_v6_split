@@ -56,7 +56,7 @@ function source_v1
 
 
     %% each cycle processes one subject
-    for h = 5:length(SubjectFolders)
+    for h = 6:6%length(SubjectFolders)
 
         SubjectID = SubjectFolders{h};
         SubjectFolder = [DataFolder, '\\', SubjectID];
@@ -90,8 +90,8 @@ function source_v1
         % check which version of MEMES to use
         if strcmp(MEMES_VERSION, 'MEMES1')
             % location of your MRI database (consistent relative path across computers)
-            %MRI_folder = [pwd '\\..\\..\\..\\..\\MRI_databases\\HCP\\']; % HCP database
-            MRI_folder = 'H:\No-Backup\MRI_databases\HCP\'; % HCP database
+            MRI_folder = [pwd '\\..\\..\\..\\..\\MRI_databases\\HCP\\']; % HCP database
+            %MRI_folder = 'H:\No-Backup\MRI_databases\HCP\'; % HCP database
             coreg_output = [pwd '\\MEMES\\']; % where to store the output from MEMES
             
             % if headmodel etc haven't been generated, do this now
@@ -102,10 +102,10 @@ function source_v1
                 initial_mri_realign = temp.initial_mri_realign;
                 path_to_MRI_library = MRI_folder;
 
-                MEMES(pwd,coreg_output,elpfile,hspfile,confile,mrkfile,path_to_MRI_library,...
-                    mesh_library,initial_mri_realign,bad_coil);
-                %MEMES2(pwd, elpfile, hspfile, confile, mrkfile,path_to_MRI_library,...
-                %    mesh_library,initial_mri_realign, bad_coil, 'best', 1)
+                %MEMES(pwd,coreg_output,elpfile,hspfile,confile,mrkfile,path_to_MRI_library,...
+                %    mesh_library,initial_mri_realign,bad_coil);
+                MEMES2(pwd, elpfile, hspfile, confile, mrkfile,path_to_MRI_library,...
+                    mesh_library,initial_mri_realign, bad_coil, 'best', 1)
 
                 %mrifile = 'single_subj_T1.nii'; % use the template that comes with FT
                 % don't use the dummy .mri file created by ME160 - it doesn't contain anything
