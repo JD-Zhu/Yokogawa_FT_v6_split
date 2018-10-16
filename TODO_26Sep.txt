@@ -1,12 +1,21 @@
 TODO - Mon 15 Oct 2018:
 
-1. We found out the trigger leak was present in all of channels 81-89!
+[DONE]1. We found out the trigger leak was present in all of channels 81-89!
 Rerun with these channels removed (scripts have already been modified): Yokogawa -> source_v1 -> stats_ROI
 
 ERF results: absolutely nothing, but we can always use the old verion of ERFs (w/o covmatrix) - it's valid because all of channels 81-89 were removed, so we can be confident that the effect is real
-ROI results: 
+ROI results (HCP database): ??
+ROI results (SLIM database): nothing (except a late target-locked effect in RSTG)
 
-2. If this doesn't work, then try Paul's method (replace the -60~-45ms interval using an inverse/shuffled version of -75~-60ms), but only do this for channels 81-89 (!!) No need to touch the other channels as they are not affected by trigger leak.
+
+NOTE: actually, removing these 9 channels doesn't completely get rid of the trigger artefact. Even though it's no longer in the GFPs (or only a tiny spike), it still shows up in some ROIs (e.g. in the RSTG effect, we see a huge spike at 60ms pre-target). This means that THE TRIGGER ARTEFACT IS ALSO PRESENT IN ALL OTHER CHANNELS in small amounts (the amount probably varies between channels, which is why the spike shows up in some ROIs but not others).
+
+
+[DO THIS]2. If this doesn't work, then try Paul's method (replace the -60~-45ms interval using an inverse/shuffled version of -75~-60ms). Do this for all channels.
+
+
+3. If still doens't work, follow Andy's idea: report the 2 original effects, but explain that "the RACC effect should be taken with a grain of salt, as it is possibly contributed by an artefact." The other effect can still be taken with confidence, as that ROI is not affected by the trigger artefact (as evident in the completely-normal baseline).
+
 
 
 = Done =

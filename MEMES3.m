@@ -535,9 +535,9 @@ switch method
         % Transform (MESH --> coreg via ICP adjustment)
         headmodel.bnd.pos = ft_warp_apply(trans_matrix,headmodel.bnd.pos);
         
-        figure;
-        ft_plot_vol(headmodel);
-        ft_plot_headshape(headshape_downsampled);
+        %figure;
+        %ft_plot_vol(headmodel);
+        %ft_plot_headshape(headshape_downsampled);
         
         %% Create Sourcemodel (in mm)
         fprintf('Creating an %dmm Sourcemodel in mm\n',sourcemodel_size);
@@ -553,11 +553,13 @@ switch method
         sourcemodel3d.pos = ft_warp_apply(trans_matrix,sourcemodel3d.pos);
         
         % Create figure to check headodel and sourcemodel match
+        %{
         figure;
         ft_plot_vol(headmodel,  'facecolor', 'cortex', 'edgecolor', 'none');
         alpha 0.4; camlight;
         ft_plot_mesh(sourcemodel3d.pos(sourcemodel3d.inside,:),'vertexsize',5);
         view([0 0]);
+        %}
         
         view_angle = [0 90 180 270];
         
@@ -1031,6 +1033,7 @@ end
         headshape.pos = mesh.pos;
         
         % Create figure for quality checking
+        %{
         figure; subplot(2,2,1);ft_plot_mesh(mesh); hold on;
         title('Downsampled Mesh');
         view(0,0);
@@ -1044,6 +1047,7 @@ end
         title('Downsampled Headshape View 3');
         view(180,0);
         print('headshape_quality','-dpdf');
+        %}
         
         % Add the facial points back in (default) or leave out if user specified
         % 'no' in function call
@@ -1067,10 +1071,12 @@ end
         %         headshape.fid.pos(:,2) = headshape.fid.pos(:,2).*-1;
         
         % Plot for quality checking
+        %{
         figure;%ft_plot_sens(sensors) %plot channel position : between the 1st and 2nd coils
         ft_plot_headshape(headshape) %plot headshape
         view(0,0);
         print('headshape_quality2','-dpdf');
+        %}
         
         % Export filename
         headshape_downsampled = headshape;

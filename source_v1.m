@@ -15,13 +15,13 @@ function source_v1
     
     % which version of MEMES to use?
     % (MEMES1 - for comparability with earlier results; MEMES3 - for Chinese MRI database)
-    MEMES_VERSION = 'MEMES1';
+    MEMES_VERSION = 'MEMES3';
 
     
     % = Save files =
     
     % filename for saving the beamformer output (to avoid running the whole thing every time)
-    Beamformer_output_filename = 'beamformer_removeChannels81-89.mat'; 
+    Beamformer_output_filename = 'beamformer_MEMES3_HCP.mat'; 
     % To save a different version of beamformer results (e.g. when using 
     % a new set of ERF outputs), simply change this filename.
     % Similarly, to load a previous version of beamformer results,
@@ -56,7 +56,7 @@ function source_v1
 
 
     %% each cycle processes one subject
-    for h = 6:6%length(SubjectFolders)
+    for h = 1:length(SubjectFolders)
 
         SubjectID = SubjectFolders{h};
         SubjectFolder = [DataFolder, '\\', SubjectID];
@@ -102,10 +102,10 @@ function source_v1
                 initial_mri_realign = temp.initial_mri_realign;
                 path_to_MRI_library = MRI_folder;
 
-                %MEMES(pwd,coreg_output,elpfile,hspfile,confile,mrkfile,path_to_MRI_library,...
-                %    mesh_library,initial_mri_realign,bad_coil);
-                MEMES2(pwd, elpfile, hspfile, confile, mrkfile,path_to_MRI_library,...
-                    mesh_library,initial_mri_realign, bad_coil, 'best', 1)
+                MEMES(pwd,coreg_output,elpfile,hspfile,confile,mrkfile,path_to_MRI_library,...
+                    mesh_library,initial_mri_realign,bad_coil);
+                %MEMES2(pwd, elpfile, hspfile, confile, mrkfile,path_to_MRI_library,...
+                %    mesh_library,initial_mri_realign, bad_coil, 'best', 1)
 
                 %mrifile = 'single_subj_T1.nii'; % use the template that comes with FT
                 % don't use the dummy .mri file created by ME160 - it doesn't contain anything
@@ -132,8 +132,10 @@ function source_v1
             
         elseif strcmp(MEMES_VERSION, 'MEMES3')
             % location of your MRI database (consistent relative path across computers)  
-            MRI_folder = [pwd '\\..\\..\\..\\..\\MRI_databases\\SLIM_completed\\']; % SLIM Chinese database
-            coreg_output = [pwd '\\MEMES_Chinese\\']; % where to store the output from MEMES
+            %MRI_folder = [pwd '\\..\\..\\..\\..\\MRI_databases\\SLIM_completed\\']; % SLIM Chinese database
+            MRI_folder = [pwd '\\..\\..\\..\\..\\MRI_databases\\HCP_for_MEMES3\\']; % new HCP database (works with MEMES3)
+            %coreg_output = [pwd '\\MEMES_Chinese\\']; % where to store the output from MEMES
+            coreg_output = [pwd '\\MEMES3_HCP\\']; % where to store the output from MEMES
             
             % if headmodel etc haven't been generated, do this now
             if ~exist([coreg_output 'headmodel.mat'], 'file')

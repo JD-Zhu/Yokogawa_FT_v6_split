@@ -1,21 +1,37 @@
-= Re-running the version before any "TRIGGER artefact removal", removing channels 81-89 =
+Method for "TRIGGER artefact removal": just remove channels 81-89, no other steps applied
+
+Reason: we isolated the channels affected by trigger leak by plotting single-subject GFPs on subsets of channels. When ANY of channels 81-89 were included, we see a spike at the trigger time. Only plotting the remaining 151 channels shows no spike, indicating these channels are intact. (Note: we have now determined this is not the case, even if the spike doens't show in GFP, or shows up as very tiny, it still came out as a huge spike in certain ROIs, e.g. RSTG)
+
+
+ERF results: absolutely nothing, but we can always use the old verion of ERFs (w/o covmatrix) - it's valid because all of channels 81-89 were removed, so we can be confident that the effect is real
+
+
+
+= Using HCP database & MEMES1 =
 
 Aim: hopefully this retains the old effects (because minimum change to the data), but also get rid of trigger spike (because we remove the 9 channels)
 
-In source_v1:
-Using HCP database & MEMES1 - the subjects with bad coils have problems in coreg:
+The subjects with bad coils have problems in coreg:
 M08 - see attached pic
 M10
-M20
+M20 (1 bad coil) -> now fixed after copying new realignment code from MEMES3 into MEMES1
+		 -> brain turned to the right in MEMES3
 
-Check again (brain very tilted to the right):
-M21 - see attached pic
+Check again (brain turned to the right):
+M21 - see attached pic -> all good in MEMES3, prob the particular winner MRI found for this subject in the HCP database itself has bad alignment.
+
+Check: is M24 tilted in MEMES1? Yes, so the subject prob was tilted during the session. It's not the winner MRI's problem.
 
 =
 Attempted solution (tried on M08): add the new features from MEMES3 (for handling 2 bad coils) into MEMES1/MEMES2, in order to make 2-bad-coil subjects work with the HCP database:
 
 MEMES1 - copied over the new features (esp for 2 bad coils) from MEMES3
     >> doesn't work, plots are tilted (hsp & mesh are misaligned)
+
+<TODO> DL MEMES1 again & apply the fix from MEMES3, this might contain the changes needed. Then call it manually. If works, modify my source_v1 to call MEMES1 this way
+
+A: Nope. didnt help.
+
 
 MEMES2 - copied over the new features (esp for 2 bad coils) from MEMES3
     >> doesn't work, mesh and grid have the wrong unit (appears tiny when plotted alongside hsp and sensors) & are misaligned with the hsp and sensors
@@ -25,8 +41,12 @@ MEMES3
 
 
 
-= Re-running the version before any "TRIGGER artefact removal", removing channels 81-89 =
+= Using SLIM database & MEMES3 =
 
-- Run source_v1 using Chinese database & MEMES3
-- check coreg plots
-- run stats_ROI
+- check coreg plots:
+    M20 & M24 are slightly tilted, might be ok. The rest are fine.
+- run stats_ROI:
+    no effects (except a late target-locked effect in RSTG)
+
+
+
