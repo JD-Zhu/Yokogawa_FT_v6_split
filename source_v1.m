@@ -21,7 +21,9 @@ function source_v1
     % = Save files =
     
     % filename for saving the beamformer output (to avoid running the whole thing every time)
-    Beamformer_output_filename = 'beamformer_MEMES3_HCP.mat'; 
+    %Beamformer_output_filename = 'beamformer_Chinese_PCAtoRemoveTrigger.mat'; 
+    Beamformer_output_filename = 'beamformer_Chinese_notRemovingTrigger.mat'; 
+    
     % To save a different version of beamformer results (e.g. when using 
     % a new set of ERF outputs), simply change this filename.
     % Similarly, to load a previous version of beamformer results,
@@ -62,7 +64,7 @@ function source_v1
         SubjectFolder = [DataFolder, '\\', SubjectID];
         cd(SubjectFolder); % change directory
 
-        %% Step 1: coreg (to obtain individualised headmodel & mri)
+        %% Step 1: coreg (to obtain individualised headmodel & sourcemodel)
         
         % check whether this is a subject folder
         elp_file  = dir('*.elp'); % find the .elp file
@@ -132,10 +134,10 @@ function source_v1
             
         elseif strcmp(MEMES_VERSION, 'MEMES3')
             % location of your MRI database (consistent relative path across computers)  
-            %MRI_folder = [pwd '\\..\\..\\..\\..\\MRI_databases\\SLIM_completed\\']; % SLIM Chinese database
-            MRI_folder = [pwd '\\..\\..\\..\\..\\MRI_databases\\HCP_for_MEMES3\\']; % new HCP database (works with MEMES3)
-            %coreg_output = [pwd '\\MEMES_Chinese\\']; % where to store the output from MEMES
-            coreg_output = [pwd '\\MEMES3_HCP\\']; % where to store the output from MEMES
+            MRI_folder = [pwd '\\..\\..\\..\\..\\MRI_databases\\SLIM_completed\\']; % SLIM Chinese database
+            %MRI_folder = [pwd '\\..\\..\\..\\..\\MRI_databases\\HCP_for_MEMES3\\']; % new HCP database (works with MEMES3)
+            coreg_output = [pwd '\\MEMES_Chinese\\']; % where to store the output from MEMES
+            %coreg_output = [pwd '\\MEMES3_HCP\\']; % where to store the output from MEMES
             
             % if headmodel etc haven't been generated, do this now
             if ~exist([coreg_output 'headmodel.mat'], 'file')
@@ -170,12 +172,14 @@ function source_v1
 
 
         %% Step 2: load this subject's ERF results
+        %
         subject_data = load([ResultsFolder SubjectID '_erf' filename_suffix '.mat']);
         erf = subject_data.erf_clean;
         erf_cue_combined = subject_data.erf_cue_combined;
         erf_target_combined = subject_data.erf_target_combined;
         clear subject_data;
-
+        %
+        
         %% only need this section if restricting to a certain freq band
         % (remember: erf is averaging then calc, freq is calc'ing on indi trials then average)
         % NOTE: you can do this elsewhere & simply load the results (just like you did above with the ERF results) 
@@ -294,7 +298,7 @@ function source_v1
             ft_plot_vol(headmodel, 'edgecolor', 'cortex'); alpha 0.4; % plot the single shell (i.e. brain shape)
             ft_plot_mesh(sourcemodel.pos(sourcemodel.inside,:)); % plot all vertices (ie. grid points) that are inside the brain
             %
-
+            
             
             % Create the leadfield
             cfg            = [];
@@ -420,6 +424,7 @@ function source_v1
                 % load required files
                 temp = load([templates_dir, 'standard_sourcemodel3d5mm']);
                 template_sourcemodel = temp.sourcemodel;
+                template_sourcemodel = ft_convert_units(template_sourcemodel, 'mm');
 
                 temp = load(Beamformer_output_file);
                 sourcemodel = temp.sourcemodel;
@@ -429,7 +434,7 @@ function source_v1
 
                 % Load Atlas (contains parcellation of brain into regions/tissues/parcels)
                 atlas = ft_read_atlas(fullfile(templates_dir, 'ROI_MNI_V4.nii'));
-                atlas = ft_convert_units(atlas, 'cm');% ensure that atlas and template_sourcemodel are expressed in the same units
+                atlas = ft_convert_units(atlas, 'mm');% ensure that atlas and template_sourcemodel are expressed in the same units
 
                 % Interpolate the atlas onto template sourcemodel (10mm grid),
                 % because the atlas may not be at the same resolution as your grid
@@ -441,48 +446,67 @@ function source_v1
 
                 % Add the tissue labels from atlas to our sourcemodel
                 % (each "tissue label" defines one "parcel")
-                sourcemodel.tissue      = atlas_interpo.tissue; 
-                sourcemodel.tissuelabel = atlas_interpo.tissuelabel;
+                %sourcemodel.tissue      = atlas_interpo.tissue; 
+                %sourcemodel.tissuelabel = atlas_interpo.tissuelabel;
 
 
                 % Define our ROIs (can combine multiple parcels together to form one ROI)
                 ROIs = {{'Frontal_Inf_Oper_L';'Frontal_Inf_Tri_L'},{'Frontal_Inf_Oper_R';'Frontal_Inf_Tri_R'},...
                     {'Temporal_Sup_L'},{'Temporal_Sup_R'},{'Supp_Motor_Area_L'},{'Supp_Motor_Area_R'},...
-                    {'Cingulum_Ant_L'},{'Cingulum_Ant_R'},{'Frontal_Med_Orb_L'},{'Frontal_Med_Orb_R'}...
+                    {'Cingulum_Ant_L'},{'Cingulum_Ant_R'},{'Frontal_Mid_L'},{'Frontal_Mid_R'}...
                     {'Calcarine_L';'Calcarine_R'}};
 
                 ROIs_label = {'LIFG','RIFG','LSTG','RSTG','LSMA','RSMA','LACC','RACC','LdlPFC','RdlPFC','V1'}; %Labels for the groupings
-                % Not too sure about the dlPFC (BA9, 10, 46) <- I chose 'medial orbitofrontal cortex', 
-                % plot seems to include entire middle frontal gyrus and a bit of BA10;
-                % alternatively, we could use 'Frontal_Mid_L' (middle frontal gyrus).
-                % For more precise definition of preSMA, 
-                % try (1) Stanford FIND parcellation (2) HMAT
-
+                % For dlPFC (BA9, 10, 46) <- I chose 'Frontal_Mid_L' (middle frontal gyrus)
+                % According to Wikipedia, MFG == BA9,10,46 
+                % (https://en.wikipedia.org/wiki/Middle_frontal_gyrus)
+                % Also, "The DLPFC is not an anatomical structure, but rather a functional one. 
+                % It lies in the middle frontal gyrus of humans." 
+                % (https://en.wikipedia.org/wiki/Dorsolateral_prefrontal_cortex)
+                %
+                % Have tried 'Frontal_Med_Orb_L' (medial orbitofrontal cortex) before, 
+                % the location seems to be at the frontal tip of IFG.
+                % 
+                % Some advice re: ROI definitions
+                % (https://sourceforge.net/p/marsbar/mailman/message/34517456/)
+                % "I have seen many students trying to replicate prior work on “DLPFC” and other nonsense terms, and usually fail, because there usually aren't any protocols - or consensus.
+                % I suggest you do stick to anatomical terms. Another possibility may be to define your ROI functionally (which you can do easily in MarsBaR, starting from SPM).
+                % Incidentally, AAL is a single-subject atlas. Any single subject atlas is on average about five points less accurate compared with the manual gold standard on standard overlap indices (e.g. Dice) than a maximum probability atlas based on multiple subjects, simply because any individual is not representative... Maximum probability atlases are single files, hence exactly as easy to handle as AAL, and readily available, e.g. from LONI, or from us. Available at http://www.brain-development.org "
+                % 
+                %
+                % For more precise definition of preSMA, can try:
+                % (1) Stanford FIND parcellation (2) HMAT
+                %
+                
 
                 % Make a plot showing the vertices in the parcels on the source model - a good sanity check 
                 %{
                 % to plot selected ROIs only:
-                %ROIs = {{'Frontal_Med_Orb_R'},{'Cingulum_Ant_R'},{'Frontal_Med_Orb_L'},{'Frontal_Med_Orb_R'}};       
-
-                figure('Name','Position of Points','NumberTitle','off'); hold on;
-                ft_plot_vol(headmodel,  'facecolor', 'cortex', 'edgecolor', 'none','facealpha',0.4);
-                hold on;
+                %ROIs = {{'Frontal_Med_Orb_L'},{'Frontal_Med_Orb_R'},{'Frontal_Mid_L'},{'Frontal_Mid_R'}};       
 
                 % draw the ROIs
                 parcel_vertices = [];
                 for e = 1:length(ROIs)
+                    % make a separate figure for each ROI
+                    figure('Name','Position of Points','NumberTitle','off'); hold on;
+                    ft_plot_vol(headmodel,  'facecolor', 'cortex', 'edgecolor', 'none');alpha 0.5; camlight;
+                    hold on;
+
                     indx_pos = [];
-                    for region = find(ismember(sourcemodel.tissuelabel, char(ROIs{e})))
+                    for region = find(ismember(atlas_interpo.tissuelabel, char(ROIs{e})))
                         % Get atlas points
-                        indx = (find(sourcemodel.tissue == region));
-                        for vol = 1:length(indx)
-                            indx_pos_temp(vol,:) = sourcemodel.pos(indx(vol),:); % take the warped coords
-                        end
+                        indx = (find(atlas_interpo.tissue == region));
+                        indx_pos_temp = sourcemodel.pos(indx,:);
+                        %for vol = 1:length(indx)     % this is incorrect
+                        %    indx_pos_temp(vol,:) = sourcemodel.pos(indx(vol),:); % take the warped coords
+                        %end
                         indx_pos = vertcat(indx_pos, indx_pos_temp);
                     end
-                    ft_plot_mesh(indx_pos, 'vertexcolor','k', 'vertexsize',20); hold on; drawnow; pause(0.2);
-                    title(sourcemodel.tissuelabel(region), 'Interpreter', 'none');
-                    parcel_vertices.(ROIs_label{e}) = indx_pos; %creates a struct with the vertices for each ROI being used. Might be useful at some point
+                    ft_plot_mesh(indx_pos, 'vertexcolor','k', 'vertexsize',10); hold on;
+                    title(atlas_interpo.tissuelabel(region), 'Interpreter', 'none'); 
+                    
+                    % create a struct with the vertices for each ROI being used. Might be useful at some point
+                    parcel_vertices.(ROIs_label{e}) = indx_pos; 
                 end
                 %}
 
@@ -497,8 +521,8 @@ function source_v1
                     % extract the spatial filter for each vertex in cue window & target window
                     vertices_all = []; % will hold a single list of all vertices (from all parcels belonging to this ROI)
                     for j = 1:length(ROIs{k})
-                        indx        = find(ismember(sourcemodel.tissuelabel, ROIs{k}{j})); % find index of the required tissue label
-                        vertices    = find(sourcemodel.tissue == indx); % find vertices that belong to this tissue label
+                        indx        = find(ismember(atlas_interpo.tissuelabel, ROIs{k}{j})); % find index of the required tissue label
+                        vertices    = find(atlas_interpo.tissue == indx); % find vertices that belong to this tissue label
                         % add vertices from the current parcel to the overall list
                         vertices_all = [vertices_all; vertices];
                     end

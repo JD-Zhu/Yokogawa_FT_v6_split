@@ -138,7 +138,7 @@ for k = 1:length(ROIs_label)
 
     cfg.tail = 0;
     cfg.clustertail = 0; % 2 tailed test
-    cfg.alpha = 0.05;
+    cfg.alpha = 0.1; % report all effects with p < 0.1
     cfg.correcttail = 'prob'; % correct for 2-tailedness
     cfg.numrandomization = 2000; % Rule of thumb: use 500, and double this number if it turns out 
         % that the p-value differs from the critical alpha-level (0.05 or 0.01) by less than 0.02

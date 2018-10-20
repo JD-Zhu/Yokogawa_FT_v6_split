@@ -1,0 +1,10 @@
+- sth wrong with the stat mdthod? 150-200ms after target (RIFG) seems to be huge interaction, but not reported
+    try TFCE...
+
+
+- bad coreg? (already re-ran with new stripped SLIM-completed, 294 MRIs in library)
+M03* - same winner
+M06* - same winner
+M10  - same winner
+M13**- fixed, use new version (redid beamforming & ROI_activity)
+M15**- fixed, use new version (redid beamforming & ROI_activity) 

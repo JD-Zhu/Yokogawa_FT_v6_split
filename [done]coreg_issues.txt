@@ -15,12 +15,14 @@ The subjects with bad coils have problems in coreg:
 M08 - see attached pic
 M10
 M20 (1 bad coil) -> now fixed after copying new realignment code from MEMES3 into MEMES1
-		 -> brain turned to the right in MEMES3
 
 Check again (brain turned to the right):
-M21 - see attached pic -> all good in MEMES3, prob the particular winner MRI found for this subject in the HCP database itself has bad alignment.
+M21 - see attached pic
+A: plotted again with the hsp, determined this is due to the physical position of the subject's head in the MEG being at an angle
 
-Check: is M24 tilted in MEMES1? Yes, so the subject prob was tilted during the session. It's not the winner MRI's problem.
+Check: is M24 tilted in MEMES1? 
+A: Yes, so the subject prob was tilted during the session. It's not the winner MRI's problem.
+You can more easily check this by plotting the hsp (will tell you the subject's actual position in the MEG).
 
 =
 Attempted solution (tried on M08): add the new features from MEMES3 (for handling 2 bad coils) into MEMES1/MEMES2, in order to make 2-bad-coil subjects work with the HCP database:
@@ -28,7 +30,7 @@ Attempted solution (tried on M08): add the new features from MEMES3 (for handlin
 MEMES1 - copied over the new features (esp for 2 bad coils) from MEMES3
     >> doesn't work, plots are tilted (hsp & mesh are misaligned)
 
-<TODO> DL MEMES1 again & apply the fix from MEMES3, this might contain the changes needed. Then call it manually. If works, modify my source_v1 to call MEMES1 this way
+Tried: DL MEMES1 again & apply the fix from MEMES3, this might contain the changes needed. Then call it manually. If works, modify my source_v1 to call MEMES1 this way.
 
 A: Nope. didnt help.
 
@@ -39,6 +41,10 @@ MEMES2 - copied over the new features (esp for 2 bad coils) from MEMES3
 MEMES3 
     >> Can use "new HCP library for MEMES3", Rob gave me the link. He noted, however, that this is a new library with different initial realignments and might give different results to the MEMES1 HCP library.
 
+
+<FINAL VERDICT>
+None of these works. MEMES3 with new HCP library produced realignments with the head tilted forward (due to lack of facial info in hsp). This same issue prob also impacted the initial batch of coreg using MEMES1 & old HCP library.
+So, do not trust any source analysis we did with the HCP library (Rob is now looking at why it's not robust for no-face hsp). Just use the Chinese database.
 
 
 = Using SLIM database & MEMES3 =
