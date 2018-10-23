@@ -8,3 +8,5 @@ M06* - same winner
 M10  - same winner
 M13**- fixed, use new version (redid beamforming & ROI_activity)
 M15**- fixed, use new version (redid beamforming & ROI_activity) 
+
+Double-checked with Robert: M03 M06 M10 coreg QC look ok to him.

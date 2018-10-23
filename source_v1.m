@@ -453,8 +453,8 @@ function source_v1
                 % Define our ROIs (can combine multiple parcels together to form one ROI)
                 ROIs = {{'Frontal_Inf_Oper_L';'Frontal_Inf_Tri_L'},{'Frontal_Inf_Oper_R';'Frontal_Inf_Tri_R'},...
                     {'Temporal_Sup_L'},{'Temporal_Sup_R'},{'Supp_Motor_Area_L'},{'Supp_Motor_Area_R'},...
-                    {'Cingulum_Ant_L'},{'Cingulum_Ant_R'},{'Frontal_Mid_L'},{'Frontal_Mid_R'}...
-                    {'Calcarine_L';'Calcarine_R'}};
+                    {'Cingulum_Ant_L'},{'Cingulum_Ant_R'},{'Frontal_Mid_L';'Frontal_Med_Orb_L'},...
+                    {'Frontal_Mid_R';'Frontal_Med_Orb_R'},{'Calcarine_L';'Calcarine_R'}};
 
                 ROIs_label = {'LIFG','RIFG','LSTG','RSTG','LSMA','RSMA','LACC','RACC','LdlPFC','RdlPFC','V1'}; %Labels for the groupings
                 % For dlPFC (BA9, 10, 46) <- I chose 'Frontal_Mid_L' (middle frontal gyrus)
@@ -465,7 +465,7 @@ function source_v1
                 % (https://en.wikipedia.org/wiki/Dorsolateral_prefrontal_cortex)
                 %
                 % Have tried 'Frontal_Med_Orb_L' (medial orbitofrontal cortex) before, 
-                % the location seems to be at the frontal tip of IFG.
+                % the location is the medial-orbital side of the frontal tip of IFG.
                 % 
                 % Some advice re: ROI definitions
                 % (https://sourceforge.net/p/marsbar/mailman/message/34517456/)
@@ -477,8 +477,8 @@ function source_v1
                 % For more precise definition of preSMA, can try:
                 % (1) Stanford FIND parcellation (2) HMAT
                 %
-                
 
+        
                 % Make a plot showing the vertices in the parcels on the source model - a good sanity check 
                 %{
                 % to plot selected ROIs only:
