@@ -25,7 +25,8 @@ figure('Name', 'cue_ttype_LdlPFC_245-275ms'); hold on;
 plot(st.time, st.avg, 'LineWidth',3);
 plot(sw.time, sw.avg, 'LineWidth',3);
 xlim([-0.2 0.75]);
-xlabel('seconds');
+xlabel('Seconds');
+ylabel('Ampere per square metre');
 set(gca, 'LineWidth',1.5, 'FontSize',22); % set axes properties
 box on; % draw a border around the figure
 
@@ -60,7 +61,8 @@ figure('Name', 'target_lang_RIFG_190-235ms'); hold on;
 plot(en.time, en.avg, 'LineWidth',3);
 plot(ch.time, ch.avg, 'LineWidth',3);
 xlim([-0.2 0.75]);
-xlabel('seconds');
+xlabel('Seconds');
+ylabel('Ampere per square metre');
 set(gca, 'LineWidth',1.5, 'FontSize',22); % set axes properties
 box on; % draw a border around the figure
 
