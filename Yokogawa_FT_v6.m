@@ -26,7 +26,7 @@ CALC_UNCLEANED_ERF = false; % calculate uncleaned erf? (for quality check of res
 
 REMOVE_TRIGGER_ARTEFACT_ON_INDI_EPOCHS = false; % remove trigger-leak artefact? (spike around 55ms before cue onset & target onset)
 REMOVE_TRIGGER_ARTEFACT_ON_AVG_ERF = false;
-REMOVE_TRIGGER_LEAK_CHANNELS = true; % remove all channels affected by trigger leak (81-89)?
+REMOVE_TRIGGER_LEAK_CHANNELS = false; % remove all channels affected by trigger leak (81-89)?
 
 
 %%
@@ -154,7 +154,6 @@ for i = 1:length(SubjectIDs)
         clear erf; clear erf_clean;
         clear trials; clear trials_clean;
 
-        load([SubjectFolder S1_output_filename]); % to load 'all_blocks'
         load([SubjectFolder S2_output_filename]);
         
         % remove trigger-leak artefact (if needed)
@@ -181,6 +180,9 @@ for i = 1:length(SubjectIDs)
 
         % in uncleaned data
         if (CALC_UNCLEANED_ERF)
+            % load 'all_blocks'
+            load([SubjectFolder S1_output_filename]);
+
             for j = 1:length(eventnames)
                 cfg = [];
                 cfg.trials = events_allBlocks.(eventnames{j});

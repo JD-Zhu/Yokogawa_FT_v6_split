@@ -84,7 +84,7 @@ function source_v1
         bad_coil = ''; 
         if strcmp(SubjectID, 'M08-YL-2763') || strcmp(SubjectID, 'M10-SS-2764')
             bad_coil = {'LPFwh', 'RPFblack'};
-        elseif strcmp(SubjectID, 'M20-FG-2814')
+        elseif strcmp(SubjectID, 'M20-FG-2814') || strcmp(SubjectID, 'M17-KZ-2815')
             bad_coil = {'PFblue'};
         end
 
@@ -453,8 +453,8 @@ function source_v1
                 % Define our ROIs (can combine multiple parcels together to form one ROI)
                 ROIs = {{'Frontal_Inf_Oper_L';'Frontal_Inf_Tri_L'},{'Frontal_Inf_Oper_R';'Frontal_Inf_Tri_R'},...
                     {'Temporal_Sup_L'},{'Temporal_Sup_R'},{'Supp_Motor_Area_L'},{'Supp_Motor_Area_R'},...
-                    {'Cingulum_Ant_L'},{'Cingulum_Ant_R'},{'Frontal_Mid_L';'Frontal_Mid_Orb_L'},...
-                    {'Frontal_Mid_R';'Frontal_Mid_Orb_R'},{'Calcarine_L';'Calcarine_R'}};
+                    {'Cingulum_Ant_L'},{'Cingulum_Ant_R'},{'Frontal_Mid_L'},...
+                    {'Frontal_Mid_R'},{'Calcarine_L';'Calcarine_R'}};
 
                 ROIs_label = {'LIFG','RIFG','LSTG','RSTG','LSMA','RSMA','LACC','RACC','LdlPFC','RdlPFC','V1'}; %Labels for the groupings
                 % For dlPFC (BA9, 10, 46) <- I chose 'Frontal_Mid_L' (middle frontal gyrus)

@@ -52,8 +52,8 @@ cfg.ivar  = 2; % row of design matrix that contains independent variable (i.e. t
 
 
 % Run the t-tests
+
 fprintf('\nCUE window -> Testing switch cost in English:\n');
-
-% SELECT THE APPROPRIATE 2 CONDS TO COMPARE:
-[stat_single] = ft_timelockstatistics(cfg, data.cueenstay{:}, data.cueenswitch{:});
-
+[stat_Eng] = ft_timelockstatistics(cfg, data.cueenstay{:}, data.cueenswitch{:});
+fprintf('\nCUE window -> Testing switch cost in Chinese:\n');
+[stat_Chn] = ft_timelockstatistics(cfg, data.cuechstay{:}, data.cuechswitch{:});
