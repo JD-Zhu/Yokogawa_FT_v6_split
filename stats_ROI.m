@@ -191,26 +191,41 @@ save([ResultsFolder_ROI 'stats.mat'], 'cue_interaction', 'cue_lang', 'cue_ttype'
 
 
 %% Find the effects & plot them
-
 % Automatically check all the stats output & read out the time interval
 % of each effect (from the stat.mask field)
 
 stats = load([ResultsFolder_ROI 'stats.mat']);
 load([ResultsFolder_ROI 'GA.mat']);
-fprintf('\nThe following effects were detected:\n');
+
+ROIs_names = fieldnames(GA); % get the list of ROI names
+
+% baseline correction b4 plotting
+% Q: should I do this b4 running stats (i.e. at single-subject level)?
+cfg = [];
+cfg.feedback = 'no';
+cfg.baseline = [-0.2 0];
+for k = 1:length(ROIs_names) % each cycle handles one ROI
+    ROI_name = ROIs_names{k};
+    for j = 1:length(eventnames_8)
+        GA.(ROI_name).(eventnames_8{j}) = ft_timelockbaseline(cfg, GA.(ROI_name).(eventnames_8{j})); 
+    end
+end
 
 % loop thru all 6 stats output (cue/target lang/ttype/interxn) and loop thru all ROIs in each,
 % check whether the .mask field has any non-zero entries 
 % (these are the effects & they are already cluster-corrected, so doesn't need to be consecutive 1s)
+fprintf('\nThe following effects were detected:\n');
 stats_names = fieldnames(stats);
 for i = 1:length(stats_names) % each cycle handles one effect (e.g. cue_lang)
     stat_name = stats_names{i};
     ROIs_names = fieldnames(stats.(stat_name)); % get the list of ROI names
+    
     for k = 1:length(ROIs_names) % each cycle handles one ROI
         ROI_name = ROIs_names{k};
+                
         % if the .mask contains any non-zero entries, that's an effect
         effect = find(stats.(stat_name).(ROI_name).mask); 
-        if ~isempty(effect) % if there is an effect, we print it out
+        if ~isempty(effect) % if there is an effect, we print it out & plot the ROI timecourse for each cond
             % read out the interval of the effect
             time_points = sprintf(' %d', effect);
             start_time = stats.(stat_name).(ROI_name).time(effect(1));
@@ -224,7 +239,7 @@ for i = 1:length(stats_names) % each cycle handles one effect (e.g. cue_lang)
                 pvalue = stats.(stat_name).(ROI_name).negclusters(1).prob;
             end
             fprintf('%s has an effect in %s (p = %.4f), between %.f~%.f ms (significant at samples %s).\n', ROI_name, stat_name, pvalue, start_time*1000, end_time*1000, time_points); % convert units to ms
-
+            
             % plot the effect period, overlaid onto the GA plot for this ROI
             if strcmp(stat_name(1:3), 'cue') % this effect occurs in cue window
                 figure('Name', [stat_name ' in ' ROI_name]); hold on
