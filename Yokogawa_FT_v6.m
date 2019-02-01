@@ -52,7 +52,7 @@ global SubjectID;
 % find all subject folders containing raw MEG recording
 SubjectIDs = dir([DataFolder 'M*']);
 SubjectIDs = {SubjectIDs.name}; % extract the names into a cell array
-%SubjectIDs = {'M03-AG-2784'}; % or manually select which subjects to process
+SubjectIDs = {'M31-PT-3288'}; % or manually select which subjects to process
 
 
 %% Stage 1: preprocessing & downsampling
@@ -102,18 +102,26 @@ for k = 1:length(SubjectIDs)
 
         
         % === ICA artefact removal ===
+        
+        load([ResultsFolder 'lay.mat']);
+        
+        % If needed:
+        % remove eye blinks & other large muscle artefacts (e.g. jaw clenching, hand movements)
+        %[all_blocks] = remove_artefact_ICA(all_blocks, lay);
 
+    
+        % === PCA artefact removal ===
+            
         % remove mouth-movement artefact by extracting main components from the "response" epochs
         % and projecting these out of all trials
-        load([ResultsFolder 'lay.mat']);
-        [all_blocks_clean, response_comp] = remove_artefact_ICA(all_blocks, events_allBlocks, lay, 'response');
+        [all_blocks_clean, response_comp] = remove_artefact_PCA(all_blocks, events_allBlocks, lay, 'response');
         
         % remove trigger-leak artefact (if needed)
         % Note: if we put this here, then have to redo visual rejection
         %       alternatively, we put this in Stage 3 (results looked similar)
         %if (REMOVE_TRIGGER_ARTEFACT_ON_INDI_EPOCHS)
         %    load([ResultsFolder 'lay.mat']);
-        %    [all_blocks_clean, trigger_comp] = remove_artefact_ICA(all_blocks_clean, events_allBlocks, lay, 'trigger');
+        %    [all_blocks_clean, trigger_comp] = remove_artefact_PCA(all_blocks_clean, events_allBlocks, lay, 'trigger');
         %end
 
         
@@ -159,7 +167,7 @@ for i = 1:length(SubjectIDs)
         % remove trigger-leak artefact (if needed)
         if (REMOVE_TRIGGER_ARTEFACT_ON_INDI_EPOCHS)
             load([ResultsFolder 'lay.mat']);
-            [all_blocks_clean, trigger_comp] = remove_artefact_ICA(all_blocks_clean, events_allBlocks, lay, 'trigger');
+            [all_blocks_clean, trigger_comp] = remove_artefact_PCA(all_blocks_clean, events_allBlocks, lay, 'trigger');
         end
 
         if (REMOVE_TRIGGER_LEAK_CHANNELS)
@@ -173,9 +181,9 @@ for i = 1:length(SubjectIDs)
             load([ResultsFolder 'neighbours.mat']);
             all_labels = all_blocks_clean.cfg.channel; % full list of 160 labels
             all_blocks_clean = repair_bad_channels(all_blocks_clean, neighbours, all_labels);
-        end    
-
-
+        end
+        
+        
         % === ft_redefine all event types (i.e. 8 real conditions + 'response' event) ===
 
         % in uncleaned data
@@ -234,11 +242,11 @@ for i = 1:length(SubjectIDs)
         
         % remove trigger artefact on averaged ERF
         if REMOVE_TRIGGER_ARTEFACT_ON_AVG_ERF
-            % here we use remove_artefact_ICA just to compute the trigger_comp
+            % here we use remove_artefact_PCA just to compute the trigger_comp
             % (we ignore the cleaned data it returns),
             % then manually call ft_rejectcomponent on the avg ERF for each cond
             load([ResultsFolder 'lay.mat']);
-            [~, trigger_comp] = remove_artefact_ICA(all_blocks_clean, events_allBlocks, lay, 'trigger');
+            [~, trigger_comp] = remove_artefact_PCA(all_blocks_clean, events_allBlocks, lay, 'trigger');
             
             % ft_rejectcomponent automatically converts timelock data to raw (and then
             % converts back) if you pass in one condition at a time.

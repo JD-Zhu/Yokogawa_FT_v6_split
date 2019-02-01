@@ -46,6 +46,30 @@ function [all_blocks, trialinfo_b] = preprocessing(SubjectFolder)
         cfg.bsfreq   = [49.5 50.5];
         alldata = ft_preprocessing(cfg, alldata);
 
+        
+        % browse raw data to remove noisy segments (e.g. clenched jaw)
+        % http://www.fieldtriptoolbox.org/walkthrough/#visual-data-inspection
+        %
+        % Note: doing 'partial' rejection here because there is only 1 trial,
+        % but this gives weird partial trials later on, and the final avg timecourse
+        % (ERFs) are also partial - which is bad. 
+        % Alternative is to do this step after epoching, however in that case
+        % the data we inspect will be after filtering, so it's harder to
+        % identify the artefacts (coz muscle artefacts are usually high freq)
+        %
+        % Maybe best to use ICA later instead of doing manual selection here
+        % see remove_artefact_ICA.m (called by Yokogawa_FT_v6.m)
+        %{
+        cfg = [];
+        cfg.viewmode = 'vertical';
+        cfg.continous = 'yes';
+        cfg.blocksize = 10; % display 10-sec segments
+        cfg = ft_databrowser(cfg, alldata);
+        cfg.artfctdef.reject = 'partial'; % this rejects complete trials, use 'partial' if you want to do partial artifact rejection
+        alldata = ft_rejectartifact(cfg, alldata);
+        %}
+        
+        
         %     Define trials using custom trialfun
         cfg                   = [];
         cfg.dataset           = rawfile;
@@ -60,6 +84,7 @@ function [all_blocks, trialinfo_b] = preprocessing(SubjectFolder)
         cfg.demean  = 'yes'; % subtracts the mean of the time window from all samples (i.e. centres the waveform on 0)
         cfg.detrend = 'yes'; % removes low-frequency drift
         block(i) = ft_preprocessing(cfg, alldata);
+
 
         % Create layout file for later (plotting)
         %{
