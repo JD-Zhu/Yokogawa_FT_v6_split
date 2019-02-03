@@ -55,7 +55,9 @@ function [all_blocks, trialinfo_b] = preprocessing(SubjectFolder)
         % (ERFs) are also partial - which is bad. 
         % Alternative is to do this step after epoching, however in that case
         % the data we inspect will be after filtering, so it's harder to
-        % identify the artefacts (coz muscle artefacts are usually high freq)
+        % identify the artefacts (coz muscle artefacts are usually high freq),
+        % plus the filtering itself will create some weird stuff which 
+        % may be mistakenly identified as artefact
         %
         % Maybe best to use ICA later instead of doing manual selection here
         % see remove_artefact_ICA.m (called by Yokogawa_FT_v6.m)

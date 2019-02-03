@@ -52,7 +52,7 @@ global SubjectID;
 % find all subject folders containing raw MEG recording
 SubjectIDs = dir([DataFolder 'M*']);
 SubjectIDs = {SubjectIDs.name}; % extract the names into a cell array
-SubjectIDs = {'M31-PT-3288'}; % or manually select which subjects to process
+%SubjectIDs = {'M31-PT-3288'}; % or manually select which subjects to process
 
 
 %% Stage 1: preprocessing & downsampling

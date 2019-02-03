@@ -77,6 +77,42 @@ legend({'English  (L2)', 'Mandarin (L1)'}, 'Location','northwest', 'FontSize',30
 hold off;
 
 
+%% Some weird effects to explain:
+ROI_name = 'RSMA';
+start_time = -0.155;
+end_time = 0.465;
+
+en = GA.(ROI_name).cueenstay;
+en.avg = (GA.(ROI_name).cueenstay.avg + GA.(ROI_name).cueenswitch.avg) / 2;
+ch = GA.(ROI_name).cuechstay;
+ch.avg = (GA.(ROI_name).cuechstay.avg + GA.(ROI_name).cuechswitch.avg) / 2;
+
+% baseline correction
+cfg = [];
+cfg.baseline = [-0.2 0];
+en = ft_timelockbaseline(cfg, en); 
+ch = ft_timelockbaseline(cfg, ch); 
+
+figure('Name', 'cue_lang_RSMA_-155~465ms'); hold on;
+plot(en.time, en.avg, 'LineWidth',3);
+plot(ch.time, ch.avg, 'LineWidth',3);
+xlim([-0.2 1]);
+xlabel('Seconds');
+ylabel('Ampere per square metre');
+set(gca, 'LineWidth',1.5, 'FontSize',22); % set axes properties
+box on; % draw a border around the figure
+
+% create shaded region indicating effect duration
+ylimits = ylim; ylow = ylimits(1); yhigh = ylimits(2);
+x = [start_time end_time end_time start_time]; % specify x,y coordinates of the 4 corners
+y = [ylow ylow yhigh yhigh];
+patch(x,y,'black', 'FaceAlpha',0.15) % draw the shade (FaceAlpha is transparency)
+ylim(ylimits); % ensure ylim doesn't get expanded
+
+legend({'English  (L2)', 'Mandarin (L1)'}, 'Location','northwest', 'FontSize',30);
+hold off;
+
+
 %% below are for old effects 
 % (incorrect coreg from MEMES1/HCP due to lack of facial points in my hsp)
 
