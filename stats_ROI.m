@@ -200,7 +200,8 @@ load([ResultsFolder_ROI 'GA.mat']);
 ROIs_names = fieldnames(GA); % get the list of ROI names
 
 % baseline correction b4 plotting
-% Q: should I do this b4 running stats (i.e. at single-subject level)?
+% Note: this is the right place to do baseline correction, decided not to do it
+% b4 running stats (i.e. at single-subject level) - see my email for expla
 cfg = [];
 cfg.feedback = 'no';
 cfg.baseline = [-0.2 0];
@@ -223,52 +224,122 @@ for i = 1:length(stats_names) % each cycle handles one effect (e.g. cue_lang)
     for k = 1:length(ROIs_names) % each cycle handles one ROI
         ROI_name = ROIs_names{k};
                 
-        % if the .mask contains any non-zero entries, that's an effect
+        % if the .mask contains any 1s, that's an effect (the rest are 0s)
+        mask = stats.(stat_name).(ROI_name).mask; 
         effect = find(stats.(stat_name).(ROI_name).mask); 
-        if ~isempty(effect) % if there is an effect, we print it out & plot the ROI timecourse for each cond
-            % read out the interval of the effect
-            time_points = sprintf(' %d', effect);
-            start_time = stats.(stat_name).(ROI_name).time(effect(1));
-            end_time = stats.(stat_name).(ROI_name).time(effect(end)); %NOTE: we are assuming the effect is continuous here (which is prob true in most cases). But really should check this!! (which is why we output the samples / time points below)
-            % read out the p-value (only reporting p-value of the most sig cluster, i.e. if there are multi clusters in the same ROI for the same contrast, the pvalues printed for the less sig clusters are incorrect)
-            if ~isempty(stats.(stat_name).(ROI_name).posclusters)
-                pvalue = stats.(stat_name).(ROI_name).posclusters(1).prob;
-            end
-            if ~isempty(stats.(stat_name).(ROI_name).negclusters) && ...
-                    (stats.(stat_name).(ROI_name).negclusters(1).prob < pvalue)
-                pvalue = stats.(stat_name).(ROI_name).negclusters(1).prob;
-            end
-            fprintf('%s has an effect in %s (p = %.4f), between %.f~%.f ms (significant at samples %s).\n', ROI_name, stat_name, pvalue, start_time*1000, end_time*1000, time_points); % convert units to ms
+        if ~isempty(effect) 
+            % if there is any effect present, find the start & end of each cluster
+            start_points = find(diff(mask) == 1); % transitions from 0 to 1
+            end_points = find(diff(mask) == -1); % transitions from 1 to 0
             
-            % plot the effect period, overlaid onto the GA plot for this ROI
+            % check if we are missing the very first start point
+            if (mask(1) == 1)
+                start_points = [1 start_points];
+            end
+            % check if we are missing the very last end point
+            if (mask(end) == 1)
+                end_points = [end_points length(mask)];
+            end
+            % sanity check
+            assert (length(start_points) == length(end_points));
+            
+            % increase the index for all start points by 1 (coz the "transition" found by diff 
+            % is the position of the last '0' before it turns into '1')
+            start_points = start_points + 1;
+
+            
+            % produce console output & GA plot for this ROI
+            fprintf('%s has an effect in %s:\n', ROI_name, stat_name);
+            
+            % GA plot
             if strcmp(stat_name(1:3), 'cue') % this effect occurs in cue window
                 figure('Name', [stat_name ' in ' ROI_name]); hold on
                 for j = conds_cue
                     plot(GA.(ROI_name).(eventnames_8{j}).time, GA.(ROI_name).(eventnames_8{j}).avg);
-                    xlim([-0.2 1]); 
                 end
-                line([start_time start_time], ylim, 'Color','black'); % plot a vertical line at start_time
-                line([end_time end_time], ylim, 'Color','black'); % plot a vertical line at end_time
-                % make a colour patch for the time interval of the effect
-                % (this keeps occupying the front layer, blocking the GA plot)
-                %x = [start_time end_time end_time start_time]; % shade between 2 values on x-axis
-                %y = [min(ylim)*[1 1] max(ylim)*[1 1]]; % fill up throughout y-axis
-                %patch(x,y,'white'); % choose colour
                 legend(eventnames_8(conds_cue));
             elseif strcmp(stat_name(1:6), 'target') % this effect occurs in target window
                 figure('Name', [stat_name ' in ' ROI_name]); hold on
                 for j = conds_target
                     plot(GA.(ROI_name).(eventnames_8{j}).time, GA.(ROI_name).(eventnames_8{j}).avg);
-                    xlim([-0.2 1]); 
                 end
-                line([start_time start_time], ylim, 'Color','black'); % plot a vertical line at start_time
-                line([end_time end_time], ylim, 'Color','black'); % plot a vertical line at end_time
                 legend(eventnames_8(conds_target));                
             else % should never be here
                 fprintf('Error: an effect is found, but its not in either cue nor target window.\n');
             end
-        else % output a msg even if there's no effect, just so we know the script ran correctly
-            %fprintf('%s: No effect in %s\n', stat_name, ROI_name);
+            
+            xlim([-0.2 1]); 
+            xlabel('Seconds');
+            ylabel('Ampere per square metre');
+            set(gca, 'LineWidth',1.5, 'FontSize',22); % set axes properties
+            box on; % draw a border around the figure
+
+            
+            % print out info about each cluster & mark it on the GA plot
+            for cluster = 1:length(start_points)
+                start_sample = start_points(cluster);
+                end_sample = end_points(cluster);
+                
+                % read out the necessary info
+                pvalue = stats.(stat_name).(ROI_name).prob(start_sample); % p-value is the same for all time points in a cluster, so we just read it from the first time point
+                start_time = stats.(stat_name).(ROI_name).time(start_sample);
+                end_time = stats.(stat_name).(ROI_name).time(end_sample); 
+
+                fprintf('    p = %.4f, between %.f~%.f ms (significant at samples %d to %d).\n', ...
+                    pvalue, start_time*1000, end_time*1000, start_sample, end_sample); % convert units to ms
+                
+                % mark the cluster interval on the GA plot
+                %line([start_time start_time], ylim, 'Color','black'); % plot a vertical line at start_time
+                %line([end_time end_time], ylim, 'Color','black'); % plot a vertical line at end_time
+                
+                % create shaded region indicating effect duration
+                ylimits = ylim; ylow = ylimits(1); yhigh = ylimits(2);
+                x = [start_time end_time end_time start_time]; % specify x,y coordinates of the 4 corners
+                y = [ylow ylow yhigh yhigh];
+                patch(x,y,'black', 'FaceAlpha',0.15) % draw the shade (FaceAlpha is transparency)
+                ylim(ylimits); % ensure ylim doesn't get expanded
+            end
+        
+            hold off;
+            
+            % old code to check multiple clusters
+            %{
+            % if the .mask contains any non-zero entries, that's an effect
+            effect = find(stats.(stat_name).(ROI_name).mask); 
+            if ~isempty(effect) % if there is an effect, we print it out & plot the ROI timecourse for each cond
+            
+            % check whether there are any jumps in the indices (i.e. multiple clusters)
+            jump_positions = find(diff(effect) ~= 1);
+
+            % find the start point for the first temporal cluster
+            start_sample = effect(1);
+
+            % find the end point for each cluster & print out this cluster
+            for cluster = 1:length(jump_positions)
+
+                end_sample = effect(jump_positions(cluster));
+
+                % read out the necessary info
+                pvalue = stats.(stat_name).(ROI_name).prob(start_sample); % p-value is the same for all time points in a cluster, so we just read it from the first time point
+                start_time = stats.(stat_name).(ROI_name).time(start_sample);
+                end_time = stats.(stat_name).(ROI_name).time(end_sample); 
+
+                fprintf('%s has an effect in %s (p = %.4f), between %.f~%.f ms (significant at samples %d to %d).\n', ROI_name, stat_name, pvalue, start_time*1000, end_time*1000, start_sample, end_sample); % convert units to ms
+
+                % start point for the next cluster
+                start_sample = effect(jump_positions(cluster) + 1);
+            end
+
+            % find the end point for the final cluster & print out this cluster
+            end_sample = effect(end); 
+            % read out the necessary info
+            pvalue = stats.(stat_name).(ROI_name).prob(start_sample); % p-value is the same for all time points in a cluster, so we just read it from the first time point
+            start_time = stats.(stat_name).(ROI_name).time(start_sample);
+            end_time = stats.(stat_name).(ROI_name).time(end_sample); 
+
+            fprintf('%s has an effect in %s (p = %.4f), between %.f~%.f ms (significant at samples %d to %d).\n', ROI_name, stat_name, pvalue, start_time*1000, end_time*1000, start_sample, end_sample); % convert units to ms
+
+            %}
         end
     end
 end

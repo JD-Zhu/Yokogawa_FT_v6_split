@@ -78,9 +78,7 @@ hold off;
 
 
 %% Some weird effects to explain:
-ROI_name = 'RSMA';
-start_time = -0.155;
-end_time = 0.465;
+ROI_name = 'LIFG';
 
 en = GA.(ROI_name).cueenstay;
 en.avg = (GA.(ROI_name).cueenstay.avg + GA.(ROI_name).cueenswitch.avg) / 2;
@@ -93,7 +91,7 @@ cfg.baseline = [-0.2 0];
 en = ft_timelockbaseline(cfg, en); 
 ch = ft_timelockbaseline(cfg, ch); 
 
-figure('Name', 'cue_lang_RSMA_-155~465ms'); hold on;
+figure('Name', 'cue_lang_RSMA_-160_to_-135_and_725_to_750ms'); hold on;
 plot(en.time, en.avg, 'LineWidth',3);
 plot(ch.time, ch.avg, 'LineWidth',3);
 xlim([-0.2 1]);
@@ -102,14 +100,30 @@ ylabel('Ampere per square metre');
 set(gca, 'LineWidth',1.5, 'FontSize',22); % set axes properties
 box on; % draw a border around the figure
 
-% create shaded region indicating effect duration
+% create shaded regions indicating effect duration
+
+% cluster 1
+start_time = -0.160;
+end_time = -0.135;
+
 ylimits = ylim; ylow = ylimits(1); yhigh = ylimits(2);
 x = [start_time end_time end_time start_time]; % specify x,y coordinates of the 4 corners
 y = [ylow ylow yhigh yhigh];
 patch(x,y,'black', 'FaceAlpha',0.15) % draw the shade (FaceAlpha is transparency)
 ylim(ylimits); % ensure ylim doesn't get expanded
 
-legend({'English  (L2)', 'Mandarin (L1)'}, 'Location','northwest', 'FontSize',30);
+% cluster 2
+start_time = 0.725;
+end_time = 0.750;
+
+ylimits = ylim; ylow = ylimits(1); yhigh = ylimits(2);
+x = [start_time end_time end_time start_time]; % specify x,y coordinates of the 4 corners
+y = [ylow ylow yhigh yhigh];
+patch(x,y,'black', 'FaceAlpha',0.15) % draw the shade (FaceAlpha is transparency)
+ylim(ylimits); % ensure ylim doesn't get expanded
+
+
+legend({'English  (L2)', 'Mandarin (L1)'}, 'Location','northeast', 'FontSize',30);
 hold off;
 
 
