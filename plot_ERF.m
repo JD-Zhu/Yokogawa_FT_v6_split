@@ -23,7 +23,7 @@ function plot_ERF (erf, erf_clean, lay, plot_uncleaned, plot_multiplot)
     cfg.showlabels   = 'yes';
     cfg.fontsize     = 6;
     cfg.layout       = lay;
-    cfg.baseline     = [-0.2 0]; % makes no diff if we've already done baseline correction earlier
+    cfg.baseline     = [-0.1 0]; % makes no diff if we've already done baseline correction earlier
     cfg.baselinetype = 'absolute';
 
     % all pairwise comparisons btwn raw data (erf) & after artefact removal (erf_clean)
@@ -40,12 +40,12 @@ function plot_ERF (erf, erf_clean, lay, plot_uncleaned, plot_multiplot)
     % (requires the list of 'cfg' assignments above, if running in console)
     if (plot_multiplot)
         figure('Name','ft_multiplotER: erf_clean.cuechstay, erf_clean.cuechswitch, erf_clean.cueenstay, erf_clean.cueenswitch');
-        cfg.xlim = [-0.2 0.75];
+        cfg.xlim = [-0.1 0.75];
         ft_multiplotER(cfg, erf_clean.cuechstay, erf_clean.cuechswitch, erf_clean.cueenstay, erf_clean.cueenswitch);
         legend(eventnames(conds_cue));
 
         figure('Name','ft_multiplotER: erf_clean.targetchstay, erf_clean.targetchswitch, erf_clean.targetenstay, erf_clean.targetenswitch');
-        cfg.xlim = [-0.2 0.75];
+        cfg.xlim = [-0.1 0.75];
         ft_multiplotER(cfg, erf_clean.targetchstay, erf_clean.targetchswitch, erf_clean.targetenstay, erf_clean.targetenswitch);
         legend(eventnames(conds_target));
     end
@@ -72,7 +72,7 @@ function plot_ERF (erf, erf_clean, lay, plot_uncleaned, plot_multiplot)
         end_time = end_time(end);
         %}
         plot(erf_clean_GFP.(eventnames{j}).time, erf_clean_GFP.(eventnames{j}).avg);
-        xlim([-0.2 0.75]); % epoch was [-1 1], we only want to plot [-0.2 0.75]
+        xlim([-0.1 0.75]); % epoch was [-1 1], we only want to plot [-0.1 0.75]
     end
     legend(eventnames(conds_cue));
 
@@ -80,7 +80,7 @@ function plot_ERF (erf, erf_clean, lay, plot_uncleaned, plot_multiplot)
     figure('Name','GFP_target'); hold on
     for j = conds_target
         plot(erf_clean_GFP.(eventnames{j}).time, erf_clean_GFP.(eventnames{j}).avg);
-        xlim([-0.2 0.75]); % epoch was [-1 1], we only want to plot [-0.2 0.75]
+        xlim([-0.1 0.75]); % epoch was [-1 1], we only want to plot [-0.1 0.75]
     end
     legend(eventnames(conds_target));
 end

@@ -234,7 +234,7 @@ for i = 1:length(SubjectIDs)
         % baseline correction
         for j = 1:length(eventnames)
             cfg = [];
-            cfg.baseline = [-0.2 0];
+            cfg.baseline = [-0.1 0];
             erf.(eventnames{j}) = ft_timelockbaseline(cfg, erf.(eventnames{j})); % uncleaned data
             erf_clean.(eventnames{j}) = ft_timelockbaseline(cfg, erf_clean.(eventnames{j})); % cleaned data
         end

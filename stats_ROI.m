@@ -83,7 +83,7 @@ for k = 1:length(ROIs_label)
     for j = conds_cue
         plot(GA_erf.(eventnames_8{j}).time, GA_erf.(eventnames_8{j}).avg);
     end
-    xlim([-0.2 0.75]);
+    xlim([-0.1 0.75]);
     legend(eventnames_8(conds_cue));
 
     % target-locked 
@@ -91,7 +91,7 @@ for k = 1:length(ROIs_label)
     for j = conds_target
         plot(GA_erf.(eventnames_8{j}).time, GA_erf.(eventnames_8{j}).avg);
     end
-    xlim([-0.2 0.75]);
+    xlim([-0.1 0.75]);
     legend(eventnames_8(conds_target));
     %}
 end
@@ -116,7 +116,7 @@ for k = 1:length(ROIs_label)
     cfg.channel = {'all'}; % there is only one channel (i.e. the virtual sensor for this ROI)
     cfg.avgoverchan = 'yes'; % this is necessary (or else FT will ask for cfg.neighbours)
     
-    cfg.latency = [-0.2 0.75]; % time interval over which the experimental 
+    cfg.latency = [-0.1 0.75]; % time interval over which the experimental 
                          % conditions must be compared (in seconds)
     cfg.avgovertime = 'no'; % if yes, this will average over the entire time window chosen in cfg.latency 
                             % (useful when you want to look at a particular component, e.g. to look at M100,
@@ -200,11 +200,11 @@ load([ResultsFolder_ROI 'GA.mat']);
 ROIs_names = fieldnames(GA); % get the list of ROI names
 
 % baseline correction b4 plotting
-% Note: this is the right place to do baseline correction, decided not to do it
+% Note: This is the right place to do baseline correction. We decided not to do it
 % b4 running stats (i.e. at single-subject level) - see my email for expla
 cfg = [];
 cfg.feedback = 'no';
-cfg.baseline = [-0.2 0];
+cfg.baseline = [-0.1 0];
 for k = 1:length(ROIs_names) % each cycle handles one ROI
     ROI_name = ROIs_names{k};
     for j = 1:length(eventnames_8)
@@ -268,7 +268,7 @@ for i = 1:length(stats_names) % each cycle handles one effect (e.g. cue_lang)
                 fprintf('Error: an effect is found, but its not in either cue nor target window.\n');
             end
             
-            xlim([-0.2 1]); 
+            xlim([-0.1 1]); 
             xlabel('Seconds');
             ylabel('Ampere per square metre');
             set(gca, 'LineWidth',1.5, 'FontSize',22); % set axes properties

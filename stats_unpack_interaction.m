@@ -13,7 +13,7 @@ cfg = [];
 cfg.channel = {'all'}; % there is only one channel (i.e. the virtual sensor for this ROI)
 cfg.avgoverchan = 'yes'; % this is necessary (or else FT will ask for cfg.neighbours)
 
-cfg.latency = [-0.2 0.75]; % time interval over which the experimental 
+cfg.latency = [-0.1 0.75]; % time interval over which the experimental 
                      % conditions must be compared (in seconds)
 cfg.avgovertime = 'no'; % if yes, this will average over the entire time window chosen in cfg.latency 
                         % (useful when you want to look at a particular component, e.g. to look at M100,

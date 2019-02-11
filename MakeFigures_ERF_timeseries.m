@@ -17,7 +17,7 @@ sw.avg = (GA_erf.cuechswitch.avg + GA_erf.cueenswitch.avg) / 2;
 
 % baseline correction
 cfg = [];
-cfg.baseline = [-0.2 0];
+cfg.baseline = [-0.1 0];
 st = ft_timelockbaseline(cfg, st); 
 sw = ft_timelockbaseline(cfg, sw); 
 
@@ -28,7 +28,7 @@ ft_singleplotER(cfg, st, sw);
 
 %plot(st.time, st.avg, 'LineWidth',3);
 %plot(sw.time, sw.avg, 'LineWidth',3);
-xlim([-0.2 0.75]);
+xlim([-0.1 0.75]);
 xlabel('seconds');
 set(gca, 'LineWidth',1.5, 'FontSize',22); % set axes properties
 legend({'Stay', 'Switch'}, 'Location','northwest', 'FontSize',22);

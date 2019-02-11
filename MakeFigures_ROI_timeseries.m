@@ -17,14 +17,14 @@ sw.avg = (GA.(ROI_name).cuechswitch.avg + GA.(ROI_name).cueenswitch.avg) / 2;
 
 % baseline correction
 cfg = [];
-cfg.baseline = [-0.2 0];
+cfg.baseline = [-0.1 0];
 st = ft_timelockbaseline(cfg, st); 
 sw = ft_timelockbaseline(cfg, sw); 
 
 figure('Name', 'cue_ttype_LdlPFC_245-275ms'); hold on;
 plot(st.time, st.avg, 'LineWidth',3);
 plot(sw.time, sw.avg, 'LineWidth',3);
-xlim([-0.2 0.75]);
+xlim([-0.1 0.75]);
 xlabel('Seconds');
 ylabel('Ampere per square metre');
 set(gca, 'LineWidth',1.5, 'FontSize',22); % set axes properties
@@ -53,14 +53,14 @@ ch.avg = (GA.(ROI_name).targetchstay.avg + GA.(ROI_name).targetchswitch.avg) / 2
 
 % baseline correction
 cfg = [];
-cfg.baseline = [-0.2 0];
+cfg.baseline = [-0.1 0];
 en = ft_timelockbaseline(cfg, en); 
 ch = ft_timelockbaseline(cfg, ch); 
 
 figure('Name', 'target_lang_RIFG_190-235ms'); hold on;
 plot(en.time, en.avg, 'LineWidth',3);
 plot(ch.time, ch.avg, 'LineWidth',3);
-xlim([-0.2 0.75]);
+xlim([-0.1 0.75]);
 xlabel('Seconds');
 ylabel('Ampere per square metre');
 set(gca, 'LineWidth',1.5, 'FontSize',22); % set axes properties
@@ -87,14 +87,14 @@ ch.avg = (GA.(ROI_name).cuechstay.avg + GA.(ROI_name).cuechswitch.avg) / 2;
 
 % baseline correction
 cfg = [];
-cfg.baseline = [-0.2 0];
+cfg.baseline = [-0.1 0];
 en = ft_timelockbaseline(cfg, en); 
 ch = ft_timelockbaseline(cfg, ch); 
 
 figure('Name', 'cue_lang_RSMA_-160_to_-135_and_725_to_750ms'); hold on;
 plot(en.time, en.avg, 'LineWidth',3);
 plot(ch.time, ch.avg, 'LineWidth',3);
-xlim([-0.2 1]);
+xlim([-0.1 1]);
 xlabel('Seconds');
 ylabel('Ampere per square metre');
 set(gca, 'LineWidth',1.5, 'FontSize',22); % set axes properties
@@ -143,14 +143,14 @@ sw.avg = (GA.(ROI_name).cuechswitch.avg + GA.(ROI_name).cueenswitch.avg) / 2;
 
 % baseline correction
 cfg = [];
-cfg.baseline = [-0.2 0];
+cfg.baseline = [-0.1 0];
 st = ft_timelockbaseline(cfg, st); 
 sw = ft_timelockbaseline(cfg, sw); 
 
 figure('Name', 'cue_ttype_LdlPFC_420-450ms'); hold on;
 plot(st.time, st.avg, 'LineWidth',3);
 plot(sw.time, sw.avg, 'LineWidth',3);
-xlim([-0.2 0.75]);
+xlim([-0.1 0.75]);
 xlabel('seconds');
 set(gca, 'LineWidth',1.5, 'FontSize',22); % set axes properties
 box on; % draw a border around the figure
@@ -178,14 +178,14 @@ ch.avg = (GA.(ROI_name).cuechstay.avg + GA.(ROI_name).cuechswitch.avg) / 2;
 
 % baseline correction
 cfg = [];
-cfg.baseline = [-0.2 0];
+cfg.baseline = [-0.1 0];
 en = ft_timelockbaseline(cfg, en); 
 ch = ft_timelockbaseline(cfg, ch); 
 
 figure('Name', 'cue_lang_RACC_705-745ms'); hold on;
 plot(en.time, en.avg, 'LineWidth',3);
 plot(ch.time, ch.avg, 'LineWidth',3);
-xlim([-0.2 1]);
+xlim([-0.1 1]);
 xlabel('seconds');
 set(gca, 'LineWidth',1.5, 'FontSize',22); % set axes properties
 box on; % draw a border around the figure

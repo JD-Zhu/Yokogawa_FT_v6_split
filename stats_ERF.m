@@ -86,7 +86,7 @@ cfg              = [];
 cfg.showlabels   = 'yes';
 cfg.fontsize     = 6;
 cfg.layout       = lay;
-cfg.baseline     = [-0.2 0];
+cfg.baseline     = [-0.1 0];
 cfg.baselinetype = 'absolute';
 
 % cue
@@ -112,7 +112,7 @@ end
 figure('Name','GFP_cue'); hold on
 for j = conds_cue
     plot(GA_erf_GFP.(eventnames_8{j}).time, GA_erf_GFP.(eventnames_8{j}).avg);
-    xlim([-0.2 0.75]);
+    xlim([-0.1 0.75]);
 end
 legend(eventnames_8(conds_cue));
 
@@ -120,7 +120,7 @@ legend(eventnames_8(conds_cue));
 figure('Name','GFP_target'); hold on
 for j = conds_target
     plot(GA_erf_GFP.(eventnames_8{j}).time, GA_erf_GFP.(eventnames_8{j}).avg);
-    xlim([-0.2 0.75]);
+    xlim([-0.1 0.75]);
 end
 legend(eventnames_8(conds_target));
 
@@ -134,10 +134,10 @@ averageAcrossConds_target.avg = (GA_erf_GFP.targetchstay.avg + GA_erf_GFP.target
 
 figure('Name','Average across all conds - cue window'); 
 plot(averageAcrossConds_cue.time, averageAcrossConds_cue.avg); 
-xlim([-0.2 0.75]);
+xlim([-0.1 0.75]);
 figure('Name','Average across all conds - target window'); 
 plot(averageAcrossConds_target.time, averageAcrossConds_target.avg); 
-xlim([-0.2 0.75]);
+xlim([-0.1 0.75]);
 %}
 
 %% Statistical analysis
@@ -159,8 +159,8 @@ if (AVGOVERTIME)
                             % (useful when you want to look at a particular component, e.g. to look at M100,
                             % cfg.latency = [0.08 0.12]; cfg.avgovertime = 'yes'; )
 else % autoly detect temporal cluster
-    latency_cue = [-0.2 0.75]; % time interval over which the experimental 
-    latency_target = [-0.2 0.75]; %conditions must be compared (in seconds)
+    latency_cue = [-0.1 0.75]; % time interval over which the experimental 
+    latency_target = [-0.1 0.75]; %conditions must be compared (in seconds)
     cfg.avgovertime = 'no';
 end
 
@@ -177,7 +177,7 @@ cfg.minnbchan = 2; % minimum number of neighbourhood channels required to be sig
 
 cfg.tail = 0;
 cfg.clustertail = 0; % 2 tailed test
-cfg.alpha = 0.05; %0.001  % threshold for cluster-level statistics (any cluster with a p-value lower than this will be reported as sig - an entry of '1' in .mask field)
+cfg.alpha = 0.1; %0.001  % threshold for cluster-level statistics (any cluster with a p-value lower than this will be reported as sig - an entry of '1' in .mask field)
 cfg.correcttail = 'prob'; % correct for 2-tailedness
 cfg.numrandomization = 2000; % Rule of thumb: use 500, and double this number if it turns out 
     % that the p-value differs from the chosen alpha (e.g. 0.05) by less than 0.02
@@ -282,7 +282,7 @@ load([ResultsFolder 'lay.mat']);
 load([ResultsFolder 'GA_erf_allConditions.mat']); % only required if using ft_topoplot
 
 % select which comparison to plot
-stat = cue_ttype; % here we plot the only effect that seems to survive correction (at minnbchan = 0)
+stat = target_lang; % here we plot the only effect that seems to survive correction (at minnbchan = 0)
                   % to explore where (both in terms of time & location) the effect might have possibly
                   % occurred
                   % [TODO] then we can define more precise time window &
@@ -295,7 +295,7 @@ cfg = [];
 %cfg.zlim = [-5 5]; % set scaling (range of t-values) (usually using automatic is ok) 
 cfg.highlightcolorpos = [1 1 1]; % white for pos clusters
 cfg.highlightcolorneg = [255/255 192/255 203/255]; % pink for neg clusters
-cfg.alpha = 0.05; % any clusters with a p-value below this threshold will be plotted
+cfg.alpha = 0.1; % any clusters with a p-value below this threshold will be plotted
 cfg.layout = lay;
 % use a nice-looking colourmap
 ft_hastoolbox('brewermap', 1); % ensure this toolbox is on the path
@@ -416,7 +416,7 @@ cfg.channel = stat.label(find(cue_ttype.mask)); % autoly retrieve sig channels (
 figure('Name','Average ERF of significant channels - cue window');
 ft_singleplotER(cfg, GA_erf.cuechstay, GA_erf.cuechswitch, GA_erf.cueenstay, GA_erf.cueenswitch);
 legend(eventnames_8(conds_cue));
-xlim([-0.2 0.75]);
+xlim([-0.1 0.75]);
 
 % if doing avgovertime, plot vertical lines to indicate the time window
 if exist('latency_cue', 'var')
@@ -432,7 +432,7 @@ cfg.channel = stat.label(find(target_ttype.mask)); % autoly retrieve sig channel
 figure('Name','Average ERF of significant channels - target window');
 ft_singleplotER(cfg, GA_erf.targetchstay, GA_erf.targetchswitch, GA_erf.targetenstay, GA_erf.targetenswitch);
 legend(eventnames_8(conds_target));
-xlim([-0.2 0.75]);
+xlim([-0.1 0.75]);
 
 % if doing avgovertime, plot vertical lines to indicate the time window
 if exist('latency_target', 'var')
@@ -474,7 +474,7 @@ if isfield(eval([cond1,'_vs_',cond2,'_stat']),'posclusters') && ~isempty(eval([c
     cfg.highlightchannel = find(pos);
     subplot(3,4,4)
     eval(['plot(GM_meg_',cond1,'.time,mean(GM_meg_',cond1,'.avg(logical(',cond1,'_vs_',cond2,'_stat.posclusterslabelmat),:)))'])
-    xlim([-0.1 0.5])
+    xlim([-0.2 0.5])
     xlabel('Time (s)')
     ylabel('Amplitude (fT)')
     hold on
@@ -516,7 +516,7 @@ if isfield(eval([cond1,'_vs_',cond2,'_stat']),'negclusters') && ~isempty(eval([c
     cfg.highlightchannel = find(neg);
     subplot(3,4,4)
     eval(['plot(GM_meg_',cond1,'.time,mean(GM_meg_',cond1,'.avg(logical(',cond1,'_vs_',cond2,'_stat.negclusterslabelmat),:)))'])
-    xlim([-0.1 0.5])
+    xlim([-0.2 0.5])
     xlabel('Time (s)')
     ylabel('Amplitude (fT)')
     hold on
