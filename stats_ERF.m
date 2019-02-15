@@ -173,7 +173,8 @@ cfg.minnbchan = 2; % minimum number of neighbourhood channels required to be sig
                    % in order to form a cluster 
                    % (default: 0, ie. each single channel can be considered a cluster).
                    % 4 or 5 is a good choice; 2 is too few coz it's even below
-                   % the resolution of the sensor layout(??)
+                   % the resolution of the sensor layout (i.e. 2 adjacent sensors might
+                   % really be measuring the same thing, so ofc they are both sig)
 
 cfg.tail = 0;
 cfg.clustertail = 0; % 2 tailed test

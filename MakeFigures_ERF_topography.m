@@ -31,7 +31,9 @@ load([ResultsFolder 'stats.mat']);
 load([ResultsFolder 'lay.mat']);
 
 % select which effect to plot
-stat = cue_ttype;
+stat = target_lang;
+start_time = 0.360;
+end_time = 0.515;
 
 
 %% plot topography
@@ -48,15 +50,21 @@ cfg.colorbar          = 'yes'; % shows the scales
 %cfg.colorbar         = 'EastOutside';
 cfg.zlim              = [-4 4];%'maxabs'; % set the scaling
 
-cfg.xlim = [0.425 0.550]; % duration of the effect (as reported by ft_clusterplot)
+cfg.xlim = [start_time end_time]; % duration of the effect (as reported by ft_clusterplot)
                           % topography will be averaged over this interval
 
 cfg.highlight         = 'on'; % highlight significant channels
 cfg.highlightsymbol = '.';
 cfg.highlightsize = 26;
 cfg.highlightcolor = 'w';
-miny = 98; % index of the time point you want (we selected 485ms - middle of the effect interval)
-cfg.highlightchannel  = stat.label(ismember(stat.negclusterslabelmat(:,miny),1)); % find all the channels showing '1' at that time point
+
+% which channels to highlight? 
+time_point = (start_time + end_time) / 2; % here we highlight the channels that are sig at the middle time point
+time_point = time_point * 1000; % convert unit to ms
+time_point = 440; % manually select if needed
+time_index = round(time_point / 5 + 1); % index of the time point you want, round it up/down to an integer
+time_index = 109; % manually select if needed
+cfg.highlightchannel  = stat.label(ismember(stat.negclusterslabelmat(:,time_index),1)); % find all the channels showing '1' at that time point
 
 cfg.style             = 'straight';
 cfg.comment           = 'no';
