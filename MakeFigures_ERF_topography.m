@@ -58,13 +58,32 @@ cfg.highlightsymbol = '.';
 cfg.highlightsize = 26;
 cfg.highlightcolor = 'w';
 
+
 % which channels to highlight? 
-time_point = (start_time + end_time) / 2; % here we highlight the channels that are sig at the middle time point
+
+% here we highlight all channels that were sig 
+% at one or more time points during the effect interval
+sig_channels = [];
+% each cycle checks one channel
+for i = 1:size(stat.mask, 1)
+    if find(stat.mask(i,:)) % this channel was sig at some point
+        sig_channels = [sig_channels i]; % so add it to the list
+    end
+end
+cfg.highlightchannel  = sig_channels;
+
+% Alternatively, we highlight the channels that are sig at the middle time point
+%{
+time_point = (start_time + end_time) / 2; 
 time_point = time_point * 1000; % convert unit to ms
-time_point = 440; % manually select if needed
+%time_point = 440; % set manually if needed
 time_index = round(time_point / 5 + 1); % index of the time point you want, round it up/down to an integer
-time_index = 109; % manually select if needed
+                                        % note: this is only correct if the epoch starts from time 0;
+                                        % if it starts from -100ms, then need to adjust index accordingly
+time_index = 109; % set manually if needed
 cfg.highlightchannel  = stat.label(ismember(stat.negclusterslabelmat(:,time_index),1)); % find all the channels showing '1' at that time point
+%}
+
 
 cfg.style             = 'straight';
 cfg.comment           = 'no';
