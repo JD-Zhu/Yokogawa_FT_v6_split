@@ -252,16 +252,15 @@ for i = 1:length(stats_names) % each cycle handles one effect (e.g. cue_lang)
             fprintf('%s has an effect in %s:\n', ROI_name, stat_name);
             
             % GA plot
+            figure('Name', [stat_name ' in ' ROI_name]); hold on;
             if strcmp(stat_name(1:3), 'cue') % this effect occurs in cue window
-                figure('Name', [stat_name ' in ' ROI_name]); hold on
                 for j = conds_cue
-                    plot(GA.(ROI_name).(eventnames_8{j}).time, GA.(ROI_name).(eventnames_8{j}).avg);
+                    plot(GA.(ROI_name).(eventnames_8{j}).time, GA.(ROI_name).(eventnames_8{j}).avg, 'LineWidth',3);
                 end
                 legend(eventnames_8(conds_cue));
             elseif strcmp(stat_name(1:6), 'target') % this effect occurs in target window
-                figure('Name', [stat_name ' in ' ROI_name]); hold on
                 for j = conds_target
-                    plot(GA.(ROI_name).(eventnames_8{j}).time, GA.(ROI_name).(eventnames_8{j}).avg);
+                    plot(GA.(ROI_name).(eventnames_8{j}).time, GA.(ROI_name).(eventnames_8{j}).avg, 'LineWidth',3);
                 end
                 legend(eventnames_8(conds_target));                
             else % should never be here
@@ -276,7 +275,7 @@ for i = 1:length(stats_names) % each cycle handles one effect (e.g. cue_lang)
 
             
             % print out info about each cluster & mark it on the GA plot
-            for cluster = 1:length(start_points)
+            for cluster = 1:length(start_points) % start_points contains a list of starting points (one for each cluster)
                 start_sample = start_points(cluster);
                 end_sample = end_points(cluster);
                 
