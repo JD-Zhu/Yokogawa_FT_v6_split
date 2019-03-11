@@ -16,6 +16,23 @@
 
 clear all;
 
+% = Settings = %
+
+% Plot shaded patch around ROI time course? 
+% Options: 'no', 'SEM', 'STDEV', 'CI' ('CI' option not yet implemented)
+PLOT_SHADE = 'no';
+
+
+% colours for ROI plot (one colour for each condition):
+% Need to specify manually because we plot each cond separately, simply 
+% using default colourmap makes all lines the same colour
+colours = ['b', 'r', 'y', 'm', 'b', 'r', 'y', 'm'];
+
+% toolbox to plot shaded patch around each timecourse
+addpath(genpath('C:\Users\Judy\Documents\MATLAB\kakearney-boundedline-pkg-50f7e4b'));
+addpath(genpath('C:\Users\43606024\Documents\MATLAB\kakearney-boundedline-pkg-50f7e4b'));
+
+
 % run the #define section
 global conds_cue; global conds_target; global eventnames_8;
 global ResultsFolder_ROI; % all subjects' ROI data are stored here
@@ -130,6 +147,8 @@ for k = 1:length(ROIs_label)
     cfg.correctm = 'cluster';
     cfg.clusteralpha = 0.05;
     cfg.clusterstatistic = 'maxsum';
+    %cfg.clusterstatistic = 'wcm'; cfg.wcm_weight = 1;    
+
     %cfg.minnbchan = 3; % minimum number of neighbourhood channels required to be significant 
                        % in order to form a cluster 
                        % (default: 0, ie. each single channel can be considered a cluster).
@@ -254,15 +273,72 @@ for i = 1:length(stats_names) % each cycle handles one effect (e.g. cue_lang)
             % GA plot
             figure('Name', [stat_name ' in ' ROI_name]); hold on;
             if strcmp(stat_name(1:3), 'cue') % this effect occurs in cue window
-                for j = conds_cue
-                    plot(GA.(ROI_name).(eventnames_8{j}).time, GA.(ROI_name).(eventnames_8{j}).avg, 'LineWidth',3);
+                
+                % each cycle plots 1 line (ie. 1 condition)
+                for j = conds_cue 
+                    if strcmp(PLOT_SHADE, 'no') % do not plot shaded region, just plot a single line                  
+                        plot(GA.(ROI_name).(eventnames_8{j}).time, GA.(ROI_name).(eventnames_8{j}).avg, 'LineWidth',3);
+                    else % calc stdev or stderr at every time point, plot it as shaded region
+                        cfg = [];
+                        cfg.channel   = 'all';
+                        cfg.latency   = 'all';
+                        cfg.parameter = 'avg';
+                        cfg.keepindividual = 'yes'; % do not average across subjects, keep the data for each individual subject
+                        GA_indi       = ft_timelockgrandaverage(cfg, allSubjects_ROIs.(ROI_name).(eventnames_8{j}){:});
+
+                        % standard deviation
+                        sd = std(GA_indi.individual);
+                        % standard error margin
+                        sem = std(GA_indi.individual) ./ sqrt(size(GA_indi.individual, 1));
+                        %sem = squeeze(sem(1,:,:));
+                        
+                        if strcmp(PLOT_SHADE, 'STDEV')
+                            boundedline(GA.(ROI_name).(eventnames_8{j}).time, GA.(ROI_name).(eventnames_8{j}).avg, sd(:), 'alpha', 'transparency',0.15, colours(j));
+                        elseif strcmp(PLOT_SHADE, 'SEM')
+                            boundedline(GA.(ROI_name).(eventnames_8{j}).time, GA.(ROI_name).(eventnames_8{j}).avg, sem(:), 'alpha', 'transparency',0.15, colours(j));
+                        end
+                    end
                 end
-                legend(eventnames_8(conds_cue));
+                % specify the legend manually (otherwise it will include
+                % each shaded patch as an item too). For some reason,
+                % the order of the lines are reversed when you grab them
+                lines = findall(gcf, 'Type','line');
+                legend([lines(4) lines(3) lines(2) lines(1)], eventnames_8(conds_cue));
+                set(lines, 'Linewidth',3);
+                
             elseif strcmp(stat_name(1:6), 'target') % this effect occurs in target window
+                
                 for j = conds_target
-                    plot(GA.(ROI_name).(eventnames_8{j}).time, GA.(ROI_name).(eventnames_8{j}).avg, 'LineWidth',3);
+                    if strcmp(PLOT_SHADE, 'no') % do not plot shaded region, just plot a single line                  
+                        plot(GA.(ROI_name).(eventnames_8{j}).time, GA.(ROI_name).(eventnames_8{j}).avg, 'LineWidth',3);
+                    else % calc stdev or stderr at every time point, plot it as shaded region
+                        cfg = [];
+                        cfg.channel   = 'all';
+                        cfg.latency   = 'all';
+                        cfg.parameter = 'avg';
+                        cfg.keepindividual = 'yes'; % do not average across subjects, keep the data for each individual subject
+                        GA_indi       = ft_timelockgrandaverage(cfg, allSubjects_ROIs.(ROI_name).(eventnames_8{j}){:});
+
+                        % standard deviation
+                        sd = std(GA_indi.individual);
+                        % standard error margin
+                        sem = std(GA_indi.individual) ./ sqrt(size(GA_indi.individual, 1));
+                        %sem = squeeze(sem(1,:,:));
+                        
+                        if strcmp(PLOT_SHADE, 'STDEV')
+                            boundedline(GA.(ROI_name).(eventnames_8{j}).time, GA.(ROI_name).(eventnames_8{j}).avg, sd(:), 'alpha', 'transparency',0.15, colours(j));
+                        elseif strcmp(PLOT_SHADE, 'SEM')
+                            boundedline(GA.(ROI_name).(eventnames_8{j}).time, GA.(ROI_name).(eventnames_8{j}).avg, sem(:), 'alpha', 'transparency',0.15, colours(j));
+                        end
+                    end                    
                 end
-                legend(eventnames_8(conds_target));                
+                % specify the legend manually (otherwise it will include
+                % each shaded patch as an item too). For some reason,
+                % the order of the lines are reversed when you grab them
+                lines = findall(gcf, 'Type','line');
+                legend([lines(4) lines(3) lines(2) lines(1)], eventnames_8(conds_target)); 
+                set(lines, 'Linewidth',3);
+                
             else % should never be here
                 fprintf('Error: an effect is found, but its not in either cue nor target window.\n');
             end
@@ -273,6 +349,19 @@ for i = 1:length(stats_names) % each cycle handles one effect (e.g. cue_lang)
             set(gca, 'LineWidth',1.5, 'FontSize',22); % set axes properties
             box on; % draw a border around the figure
 
+            % set propertiese for axes, lines, and text
+            %{
+            p = findobj(gcf); % get the handles associated with the current figure
+            
+            allaxes = findall(p,'Type','axes');
+            alllines = findall(p,'Type','line');
+            alltext = findall(p,'Type','text');
+            
+            set(allaxes,'FontName','Arial','FontWeight','Bold','LineWidth',2,'FontSize',14);
+            set(alllines,'Linewidth',3);
+            set(alltext,'FontName','Arial','FontWeight','Bold','FontSize',14);
+            %}
+            
             
             % print out info about each cluster & mark it on the GA plot
             for cluster = 1:length(start_points) % start_points contains a list of starting points (one for each cluster)
