@@ -282,6 +282,10 @@ load([ResultsFolder 'stats.mat']);
 load([ResultsFolder 'lay.mat']);
 load([ResultsFolder 'GA_erf_allConditions.mat']); % only required if using ft_topoplot
 
+% use a nice-looking colourmap
+ft_hastoolbox('brewermap', 1); % ensure this toolbox is on the path
+colours = colormap(flipud(brewermap(64, 'RdBu')));
+
 % select which comparison to plot
 stat = target_lang; % here we plot the only effect that seems to survive correction (at minnbchan = 0)
                   % to explore where (both in terms of time & location) the effect might have possibly
@@ -298,9 +302,6 @@ cfg.highlightcolorpos = [1 1 1]; % white for pos clusters
 cfg.highlightcolorneg = [255/255 192/255 203/255]; % pink for neg clusters
 cfg.alpha = 0.1; % any clusters with a p-value below this threshold will be plotted
 cfg.layout = lay;
-% use a nice-looking colourmap
-ft_hastoolbox('brewermap', 1); % ensure this toolbox is on the path
-colours = colormap(flipud(brewermap(64, 'RdBu')));
 cfg.colormap = colours;
 
 % turn on the following lines if you are after one particular subplot

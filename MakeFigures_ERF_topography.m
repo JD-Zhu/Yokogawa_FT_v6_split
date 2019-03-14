@@ -29,6 +29,12 @@ common();
 %% load the results
 load([ResultsFolder 'stats.mat']);
 load([ResultsFolder 'lay.mat']);
+load([ResultsFolder 'GA_erf_allConditions.mat']);
+load([ResultsFolder 'neighbours.mat']);
+
+% load nice colourmap
+ft_hastoolbox('brewermap', 1);         % ensure this toolbox is on the path
+colours = colormap(flipud(brewermap(64, 'RdBu')));
 
 % select which effect to plot
 stat = target_lang;
@@ -36,13 +42,8 @@ start_time = 0.360;
 end_time = 0.515;
 
 
-%% plot topography
+%% plot topography for axial gradiometers (based on t-values)
 
-% load nice colourmap
-ft_hastoolbox('brewermap', 1);         % ensure this toolbox is on the path
-colours = colormap(flipud(brewermap(64, 'RdBu')));
-
-% call topoplot
 cfg                   = [];
 cfg.layout            = lay;
 cfg.colormap          = colours;
@@ -92,6 +93,51 @@ cfg.marker            = 'off'; % show the location of all channels?
 
 cfg.parameter = 'stat'; % what field (in the stats output) to plot, e.g. selecting 'stat' will plot t-values
 
-figure; ft_topoplotER(cfg, stat);
+ft_topoplotER(cfg, stat);
 set(gca,'fontsize',22); % set colorbar fontsize
 %title(gca, 'T-values');
+
+
+%% transform into planar gradient (based on actual erf amplitude) 
+
+% first, define the 2 conds to be compared:
+% here we look at main effect of lang in target window
+GA_en = GA_erf.targetenstay;
+GA_en.avg = (GA_erf.targetenstay.avg + GA_erf.targetenswitch.avg) / 2;
+GA_ch = GA_erf.targetchstay;
+GA_ch.avg = (GA_erf.targetchstay.avg + GA_erf.targetchswitch.avg) / 2;
+
+% then, calc the diff btwn the 2 conds
+cfg  = [];
+cfg.operation = 'subtract';
+cfg.parameter = 'avg';
+GA_diff = ft_math(cfg, GA_en, GA_ch);
+
+% fill in the "grad" field so that ft_megplanar will work
+GA_diff.grad = stat.grad;
+
+
+% Compute the planar gradient at each sensor location
+% in both the horizontal and the vertical direction 
+cfg                 = [];
+cfg.feedback        = 'yes';
+cfg.method          = 'template';
+cfg.neighbours      = neighbours;
+
+cfg.planarmethod    = 'sincos';
+planar              = ft_megplanar(cfg, GA_diff); % plug in any timelock struct
+
+% Combine the horizontal and vertical components 
+% of the planar gradient using Pythagoras rule
+planarComb = ft_combineplanar([], planar);
+
+% Plot the planar gradient
+cfg.zlim = 'maxabs';
+cfg.xlim = [start_time end_time]; % duration of the effect (as reported by ft_clusterplot)
+                          % topography will be averaged over this interval
+cfg.layout = lay;
+cfg.colormap = colours;
+cfg.colorbar = 'yes';
+
+ft_topoplotER(cfg, planarComb);
+set(gca,'fontsize',22); % set colorbar fontsize
