@@ -19,8 +19,9 @@ clear all;
 % = Settings = %
 
 % Plot shaded patch around ROI time course? 
-% Options: 'no', 'SEM', 'STDEV', 'CI' ('CI' option not yet implemented)
-PLOT_SHADE = 'no';
+% Options: 'no', 'SEM', 'STDEV', 'CI_95'
+% (note: SEM < 95% CI < STDEV)
+PLOT_SHADE = 'SEM';
 
 
 % colours for ROI plot (one colour for each condition):
@@ -87,11 +88,17 @@ for k = 1:length(ROIs_label)
     cfg.latency   = 'all';
     cfg.parameter = 'avg';
     for j = 1:length(eventnames_8)
-        GA_erf.(eventnames_8{j}) = ft_timelockgrandaverage(cfg, allSubjects_ROIs.(ROI_name).(eventnames_8{j}){:});  
+        cfg.keepindividual = 'no'; % average across subjects
+        GA_avg.(eventnames_8{j}) = ft_timelockgrandaverage(cfg, allSubjects_ROIs.(ROI_name).(eventnames_8{j}){:}); 
+        
+        cfg.keepindividual = 'yes'; % do not average across subjects, keep the data for each individual subject
+        GA_keepindi.(eventnames_8{j}) = ft_timelockgrandaverage(cfg, allSubjects_ROIs.(ROI_name).(eventnames_8{j}){:});
+
         % "{:}" means to use data from all elements of the variable
     end
 
-    GA.(ROI_name) = GA_erf; % store it in the correct field
+    GA.(ROI_name) = GA_avg; % store it in the correct field
+    GA_indi.(ROI_name) = GA_keepindi; % store it in the correct field
     
     % Plot the GAs
     %{
@@ -114,6 +121,7 @@ for k = 1:length(ROIs_label)
 end
 
 save([ResultsFolder_ROI 'GA.mat'], 'GA');
+save([ResultsFolder_ROI 'GA_individuals.mat'], 'GA_indi');
 
 
 %% Statistical analysis (to identify time interval of each effect, i.e. temporal clusters)
@@ -215,6 +223,7 @@ save([ResultsFolder_ROI 'stats.mat'], 'cue_interaction', 'cue_lang', 'cue_ttype'
 
 stats = load([ResultsFolder_ROI 'stats.mat']);
 load([ResultsFolder_ROI 'GA.mat']);
+load([ResultsFolder_ROI 'GA_individuals.mat']);
 
 ROIs_names = fieldnames(GA); % get the list of ROI names
 
@@ -276,80 +285,93 @@ for i = 1:length(stats_names) % each cycle handles one effect (e.g. cue_lang)
                 
                 % each cycle plots 1 line (ie. 1 condition)
                 for j = conds_cue 
-                    if strcmp(PLOT_SHADE, 'no') % do not plot shaded region, just plot a single line                  
-                        plot(GA.(ROI_name).(eventnames_8{j}).time, GA.(ROI_name).(eventnames_8{j}).avg, 'LineWidth',3);
-                    else % calc stdev or stderr at every time point, plot it as shaded region
-                        cfg = [];
-                        cfg.channel   = 'all';
-                        cfg.latency   = 'all';
-                        cfg.parameter = 'avg';
-                        cfg.keepindividual = 'yes'; % do not average across subjects, keep the data for each individual subject
-                        GA_indi       = ft_timelockgrandaverage(cfg, allSubjects_ROIs.(ROI_name).(eventnames_8{j}){:});
+                    if strcmp(PLOT_SHADE, 'no') % do not plot shaded boundary, just plot a single line                  
+                        plot(GA.(ROI_name).(eventnames_8{j}).time, GA.(ROI_name).(eventnames_8{j}).avg);
+                    else % calc the margin for shaded boundary (stdev / sem / CI) at every time point
+                        allsubjects = GA_indi.(ROI_name).(eventnames_8{j}).individual;
 
                         % standard deviation
-                        sd = std(GA_indi.individual);
-                        % standard error margin
-                        sem = std(GA_indi.individual) ./ sqrt(size(GA_indi.individual, 1));
+                        SD = std(allsubjects);
+                        
+                        % standard error of the mean
+                        SEM = SD ./ sqrt(size(allsubjects, 1));
                         %sem = squeeze(sem(1,:,:));
                         
+                        % 95% CI
+                        CI_95 = SEM * 1.96;
+                        
+                        % check settings: which option did we choose at the top?
+                        margin = [];
                         if strcmp(PLOT_SHADE, 'STDEV')
-                            boundedline(GA.(ROI_name).(eventnames_8{j}).time, GA.(ROI_name).(eventnames_8{j}).avg, sd(:), 'alpha', 'transparency',0.15, colours(j));
+                            margin = SD;
                         elseif strcmp(PLOT_SHADE, 'SEM')
-                            boundedline(GA.(ROI_name).(eventnames_8{j}).time, GA.(ROI_name).(eventnames_8{j}).avg, sem(:), 'alpha', 'transparency',0.15, colours(j));
+                            margin = SEM;
+                        elseif strcmp(PLOT_SHADE, 'CI_95')
+                            margin = CI_95;
+                        else
+                            disp('\nError: PLOT_SHADE setting was incorrectly specified - the selected option is not implemented.\n');
                         end
+                        
+                        % plot time course with shaded boundary
+                        boundedline(GA.(ROI_name).(eventnames_8{j}).time, GA.(ROI_name).(eventnames_8{j}).avg, margin(:), 'alpha', 'transparency',0.15, colours(j));                        
                     end
                 end
-                % specify the legend manually (otherwise it will include
-                % each shaded patch as an item too). For some reason,
-                % the order of the lines are reversed when you grab them
-                lines = findall(gcf, 'Type','line');
-                legend([lines(4) lines(3) lines(2) lines(1)], eventnames_8(conds_cue));
-                set(lines, 'Linewidth',3);
                 
             elseif strcmp(stat_name(1:6), 'target') % this effect occurs in target window
                 
                 for j = conds_target
-                    if strcmp(PLOT_SHADE, 'no') % do not plot shaded region, just plot a single line                  
-                        plot(GA.(ROI_name).(eventnames_8{j}).time, GA.(ROI_name).(eventnames_8{j}).avg, 'LineWidth',3);
-                    else % calc stdev or stderr at every time point, plot it as shaded region
-                        cfg = [];
-                        cfg.channel   = 'all';
-                        cfg.latency   = 'all';
-                        cfg.parameter = 'avg';
-                        cfg.keepindividual = 'yes'; % do not average across subjects, keep the data for each individual subject
-                        GA_indi       = ft_timelockgrandaverage(cfg, allSubjects_ROIs.(ROI_name).(eventnames_8{j}){:});
+                    if strcmp(PLOT_SHADE, 'no') % do not plot shaded boundary, just plot a single line                  
+                        plot(GA.(ROI_name).(eventnames_8{j}).time, GA.(ROI_name).(eventnames_8{j}).avg);
+                    else % calc the margin for shaded boundary (stdev / sem / CI) at every time point
+                        allsubjects = GA_indi.(ROI_name).(eventnames_8{j}).individual;
 
                         % standard deviation
-                        sd = std(GA_indi.individual);
-                        % standard error margin
-                        sem = std(GA_indi.individual) ./ sqrt(size(GA_indi.individual, 1));
+                        SD = std(allsubjects);
+                        
+                        % standard error of the mean
+                        SEM = SD ./ sqrt(size(allsubjects, 1));
                         %sem = squeeze(sem(1,:,:));
                         
+                        % 95% CI
+                        CI_95 = SEM * 1.96;
+                        
+                        % check settings: which option did we choose at the top?
+                        margin = [];
                         if strcmp(PLOT_SHADE, 'STDEV')
-                            boundedline(GA.(ROI_name).(eventnames_8{j}).time, GA.(ROI_name).(eventnames_8{j}).avg, sd(:), 'alpha', 'transparency',0.15, colours(j));
+                            margin = SD;
                         elseif strcmp(PLOT_SHADE, 'SEM')
-                            boundedline(GA.(ROI_name).(eventnames_8{j}).time, GA.(ROI_name).(eventnames_8{j}).avg, sem(:), 'alpha', 'transparency',0.15, colours(j));
+                            margin = SEM;
+                        elseif strcmp(PLOT_SHADE, 'CI_95')
+                            margin = CI_95;
+                        else
+                            disp('\nError: PLOT_SHADE setting was incorrectly specified - the selected option is not implemented.\n');
                         end
+                        
+                        % plot time course with shaded boundary
+                        boundedline(GA.(ROI_name).(eventnames_8{j}).time, GA.(ROI_name).(eventnames_8{j}).avg, margin(:), 'alpha', 'transparency',0.15, colours(j));
                     end                    
                 end
-                % specify the legend manually (otherwise it will include
-                % each shaded patch as an item too). For some reason,
-                % the order of the lines are reversed when you grab them
-                lines = findall(gcf, 'Type','line');
-                legend([lines(4) lines(3) lines(2) lines(1)], eventnames_8(conds_target)); 
-                set(lines, 'Linewidth',3);
                 
             else % should never be here
                 fprintf('Error: an effect is found, but its not in either cue nor target window.\n');
             end
             
-            xlim([-0.1 1]); 
+            
+            % set propertiese for axes, lines, and text
+            xlim([-0.1 0.75]); 
             xlabel('Seconds');
             ylabel('Ampere per square metre');
             set(gca, 'LineWidth',1.5, 'FontSize',22); % set axes properties
             box on; % draw a border around the figure
 
-            % set propertiese for axes, lines, and text
+            % specify the legend manually (otherwise it will include
+            % each shaded patch as an item too). For some reason,
+            % the order of the lines are reversed when you grab them
+            lines = findall(gcf, 'Type','line');
+            legend([lines(4) lines(3) lines(2) lines(1)], {'Mandarin (L1) stay', 'Mandarin (L1) switch', 'English (L2) stay', 'English (L2) switch'}, 'Location','northwest', 'FontSize',30);
+            set(lines, 'Linewidth',3); % line thickness
+                
+            % reference code:
             %{
             p = findobj(gcf); % get the handles associated with the current figure
             
