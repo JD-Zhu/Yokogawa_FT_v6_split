@@ -289,28 +289,7 @@ for i = 1:length(stats_names) % each cycle handles one effect (e.g. cue_lang)
                         plot(GA.(ROI_name).(eventnames_8{j}).time, GA.(ROI_name).(eventnames_8{j}).avg);
                     else % calc the margin for shaded boundary (stdev / sem / CI) at every time point
                         allsubjects = GA_indi.(ROI_name).(eventnames_8{j}).individual;
-
-                        % standard deviation
-                        SD = std(allsubjects);
-                        
-                        % standard error of the mean
-                        SEM = SD ./ sqrt(size(allsubjects, 1));
-                        %sem = squeeze(sem(1,:,:));
-                        
-                        % 95% CI
-                        CI_95 = SEM * 1.96;
-                        
-                        % check settings: which option did we choose at the top?
-                        margin = [];
-                        if strcmp(PLOT_SHADE, 'STDEV')
-                            margin = SD;
-                        elseif strcmp(PLOT_SHADE, 'SEM')
-                            margin = SEM;
-                        elseif strcmp(PLOT_SHADE, 'CI_95')
-                            margin = CI_95;
-                        else
-                            disp('\nError: PLOT_SHADE setting was incorrectly specified - the selected option is not implemented.\n');
-                        end
+                        margin = calc_margin(allsubjects, PLOT_SHADE);
                         
                         % plot time course with shaded boundary
                         boundedline(GA.(ROI_name).(eventnames_8{j}).time, GA.(ROI_name).(eventnames_8{j}).avg, margin(:), 'alpha', 'transparency',0.15, colours(j));                        
@@ -324,29 +303,8 @@ for i = 1:length(stats_names) % each cycle handles one effect (e.g. cue_lang)
                         plot(GA.(ROI_name).(eventnames_8{j}).time, GA.(ROI_name).(eventnames_8{j}).avg);
                     else % calc the margin for shaded boundary (stdev / sem / CI) at every time point
                         allsubjects = GA_indi.(ROI_name).(eventnames_8{j}).individual;
+                        margin = calc_margin(allsubjects, PLOT_SHADE);
 
-                        % standard deviation
-                        SD = std(allsubjects);
-                        
-                        % standard error of the mean
-                        SEM = SD ./ sqrt(size(allsubjects, 1));
-                        %sem = squeeze(sem(1,:,:));
-                        
-                        % 95% CI
-                        CI_95 = SEM * 1.96;
-                        
-                        % check settings: which option did we choose at the top?
-                        margin = [];
-                        if strcmp(PLOT_SHADE, 'STDEV')
-                            margin = SD;
-                        elseif strcmp(PLOT_SHADE, 'SEM')
-                            margin = SEM;
-                        elseif strcmp(PLOT_SHADE, 'CI_95')
-                            margin = CI_95;
-                        else
-                            disp('\nError: PLOT_SHADE setting was incorrectly specified - the selected option is not implemented.\n');
-                        end
-                        
                         % plot time course with shaded boundary
                         boundedline(GA.(ROI_name).(eventnames_8{j}).time, GA.(ROI_name).(eventnames_8{j}).avg, margin(:), 'alpha', 'transparency',0.15, colours(j));
                     end                    

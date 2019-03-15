@@ -275,29 +275,7 @@ function MakeFigures_ROI_timeseries
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % SUBFUNCTIONS
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    function margin = calc_margin(allsubjects, margin_type)
-        % standard deviation
-        SD = std(allsubjects);
 
-        % standard error of the mean
-        SEM = SD ./ sqrt(size(allsubjects, 1));
-        %sem = squeeze(sem(1,:,:));
-
-        % 95% CI
-        CI_95 = SEM * 1.96;
-
-        % check settings: which option did we choose at the top?
-        margin = [];
-        if strcmp(margin_type, 'STDEV')
-            margin = SD;
-        elseif strcmp(margin_type, 'SEM')
-            margin = SEM;
-        elseif strcmp(margin_type, 'CI_95')
-            margin = CI_95;
-        else
-            disp('\nError: PLOT_SHADE setting was incorrectly specified - the selected option is not implemented.\n');
-        end
-    end
 
 end % main function end
 
