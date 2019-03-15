@@ -150,9 +150,9 @@ for k = 1:length(ROIs_label)
     %load([ResultsFolder_ROI 'neighbours.mat']); % this is the sensor layout - it's the same for all subjects (even same across experiments). So just prepare once & save, then load here
     %cfg.neighbours = neighbours;  % same as defined for the between-trials experiment
 
-    cfg.method = 'montecarlo';
+    cfg.method = 'montecarlo'; %'analytic';
     cfg.statistic = 'depsamplesT'; %cfg.statistic = 'ft_statfun_indepsamplesT'; OR 'ft_statfun_depsamplesFmultivariate';
-    cfg.correctm = 'cluster';
+    cfg.correctm = 'cluster'; %'no';
     cfg.clusteralpha = 0.05;
     cfg.clusterstatistic = 'maxsum';
     %cfg.clusterstatistic = 'wcm'; cfg.wcm_weight = 1;    

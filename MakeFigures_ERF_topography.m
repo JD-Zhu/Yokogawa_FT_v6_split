@@ -26,7 +26,7 @@ global ResultsFolder;
 common();
 
 
-%% load the results
+% load the results
 load([ResultsFolder 'stats.mat']);
 load([ResultsFolder 'lay.mat']);
 load([ResultsFolder 'GA_erf_allConditions.mat']);
@@ -37,12 +37,12 @@ ft_hastoolbox('brewermap', 1);         % ensure this toolbox is on the path
 colours = colormap(flipud(brewermap(64, 'RdBu')));
 
 % select which effect to plot
-stat = target_lang;
+stat_output = target_lang;
 start_time = 0.360;
 end_time = 0.515;
 
 
-%% plot topography for axial gradiometers (based on t-values)
+%% plot topography for axial gradiometers
 
 cfg                   = [];
 cfg.layout            = lay;
@@ -66,8 +66,8 @@ cfg.highlightcolor = 'w';
 % at one or more time points during the effect interval
 sig_channels = [];
 % each cycle checks one channel
-for i = 1:size(stat.mask, 1)
-    if find(stat.mask(i,:)) % this channel was sig at some point
+for i = 1:size(stat_output.mask, 1)
+    if find(stat_output.mask(i,:)) % this channel was sig at some point
         sig_channels = [sig_channels i]; % so add it to the list
     end
 end
@@ -82,7 +82,7 @@ time_index = round(time_point / 5 + 1); % index of the time point you want, roun
                                         % note: this is only correct if the epoch starts from time 0;
                                         % if it starts from -100ms, then need to adjust index accordingly
 time_index = 109; % set manually if needed
-cfg.highlightchannel  = stat.label(ismember(stat.negclusterslabelmat(:,time_index),1)); % find all the channels showing '1' at that time point
+cfg.highlightchannel  = stat_output.label(ismember(stat_output.negclusterslabelmat(:,time_index),1)); % find all the channels showing '1' at that time point
 %}
 
 
@@ -93,13 +93,15 @@ cfg.marker            = 'off'; % show the location of all channels?
 
 cfg.parameter = 'stat'; % what field (in the stats output) to plot, e.g. selecting 'stat' will plot t-values
 
-ft_topoplotER(cfg, stat);
+ft_topoplotER(cfg, stat_output);
 set(gca,'fontsize',22); % set colorbar fontsize
 %title(gca, 'T-values');
 
 
-%% transform into planar gradient (based on actual erf amplitude) 
+%% transform into planar gradient
 
+% Opt 1: plot topography based on actual erf amplitude
+%{
 % first, define the 2 conds to be compared:
 % here we look at main effect of lang in target window
 GA_en = GA_erf.targetenstay;
@@ -111,11 +113,22 @@ GA_ch.avg = (GA_erf.targetchstay.avg + GA_erf.targetchswitch.avg) / 2;
 cfg  = [];
 cfg.operation = 'subtract';
 cfg.parameter = 'avg';
-GA_diff = ft_math(cfg, GA_en, GA_ch);
+timelock = ft_math(cfg, GA_en, GA_ch);
+
+%}
+
+% Opt 2: plot topography based on t-values in the stat output
+% make a fake GA_erf structure, then plug in the t-values from the stat output
+%
+timelock = GA_erf.targetenstay; % copy the GA structure from anywhere
+timelock.avg = stat_output.stat; % not sure if it uses the 'avg' or 'var' field to calc planar,
+timelock.var = stat_output.stat; % so I'll just replace both
+timelock.time = stat_output.time;
+%}
+
 
 % fill in the "grad" field so that ft_megplanar will work
-GA_diff.grad = stat.grad;
-
+timelock.grad = stat_output.grad; 
 
 % Compute the planar gradient at each sensor location
 % in both the horizontal and the vertical direction 
@@ -125,19 +138,20 @@ cfg.method          = 'template';
 cfg.neighbours      = neighbours;
 
 cfg.planarmethod    = 'sincos';
-planar              = ft_megplanar(cfg, GA_diff); % plug in any timelock struct
+planar              = ft_megplanar(cfg, timelock); % plug in any timelock struct
 
 % Combine the horizontal and vertical components 
 % of the planar gradient using Pythagoras rule
 planarComb = ft_combineplanar([], planar);
 
 % Plot the planar gradient
-cfg.zlim = 'maxabs';
+cfg.zlim = [0 3];
 cfg.xlim = [start_time end_time]; % duration of the effect (as reported by ft_clusterplot)
                           % topography will be averaged over this interval
 cfg.layout = lay;
 cfg.colormap = colours;
 cfg.colorbar = 'yes';
+cfg.comment = 'no';
 
 ft_topoplotER(cfg, planarComb);
 set(gca,'fontsize',22); % set colorbar fontsize
