@@ -28,4 +28,8 @@ function [] = common()
     conds_cue = 1:4;
     conds_target = 5:8;
     eventnames_8 = eventnames([conds_cue conds_target]); % 8 actual event types
+
+    
+    % addpath to access custom functions in all subfolders
+    addpath(genpath(pwd));
 end

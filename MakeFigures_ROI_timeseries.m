@@ -13,7 +13,7 @@ function MakeFigures_ROI_timeseries
     % using default colourmap makes all lines the same colour
     colours = ['b', 'r', 'y', 'm', 'b', 'r', 'y', 'm'];
 
-    % toolbox to plot shaded patch around each timecourse
+    % toolbox to plot shaded boundary around each timecourse (diff paths for diff computers)
     addpath(genpath('C:\Users\Judy\Documents\MATLAB\kakearney-boundedline-pkg-50f7e4b'));
     addpath(genpath('C:\Users\43606024\Documents\MATLAB\kakearney-boundedline-pkg-50f7e4b'));
 

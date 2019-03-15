@@ -57,3 +57,8 @@ fprintf('\nCUE window -> Testing switch cost in English:\n');
 [stat_Eng] = ft_timelockstatistics(cfg, data.cueenstay{:}, data.cueenswitch{:});
 fprintf('\nCUE window -> Testing switch cost in Chinese:\n');
 [stat_Chn] = ft_timelockstatistics(cfg, data.cuechstay{:}, data.cuechswitch{:});
+
+fprintf('\nCUE window -> Stay trials: English vs Chinese:\n');
+[stat_stay] = ft_timelockstatistics(cfg, data.cueenstay{:}, data.cuechstay{:});
+fprintf('\nCUE window -> Switch trials: English vs Chinese:\n');
+[stat_switch] = ft_timelockstatistics(cfg, data.cueenswitch{:}, data.cuechswitch{:});
