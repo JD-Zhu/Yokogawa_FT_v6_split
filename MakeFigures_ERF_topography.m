@@ -34,7 +34,7 @@ load([ResultsFolder 'neighbours.mat']);
 
 % load nice colourmap
 ft_hastoolbox('brewermap', 1);         % ensure this toolbox is on the path
-colours = colormap(flipud(brewermap(64, 'RdBu')));
+cmap = colormap(flipud(brewermap(64, 'RdBu')));
 
 % select which effect to plot
 stat_output = target_lang;
@@ -46,7 +46,7 @@ end_time = 0.515;
 
 cfg                   = [];
 cfg.layout            = lay;
-cfg.colormap          = colours;
+cfg.colormap          = cmap;
 cfg.colorbar          = 'yes'; % shows the scales
 %cfg.colorbar         = 'EastOutside';
 cfg.zlim              = [-4 4];%'maxabs'; % set the scaling
@@ -149,7 +149,7 @@ cfg.zlim = [0 3];
 cfg.xlim = [start_time end_time]; % duration of the effect (as reported by ft_clusterplot)
                           % topography will be averaged over this interval
 cfg.layout = lay;
-cfg.colormap = colours;
+cfg.colormap = cmap;
 cfg.colorbar = 'yes';
 cfg.comment = 'no';
 

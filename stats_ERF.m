@@ -73,11 +73,17 @@ cfg.channel   = {'all', '-AG083', '-AG087', '-AG088', '-AG082', '-AG084', '-AG08
 cfg.latency   = 'all';
 cfg.parameter = 'avg';
 for j = 1:length(eventnames_8)
+    cfg.keepindividual = 'no'; % average across subjects
     GA_erf.(eventnames_8{j}) = ft_timelockgrandaverage(cfg, allSubjects_erf.(eventnames_8{j}){:});  
+
+    cfg.keepindividual = 'yes'; % do not average across subjects, keep the data for each individual subject
+    GA_indi.(eventnames_8{j}) = ft_timelockgrandaverage(cfg, allSubjects_erf.(eventnames_8{j}){:}); 
+
     % "{:}" means to use data from all elements of the variable
 end
 
-save([ResultsFolder 'GA_erf_allConditions.mat'], 'GA_erf');
+save([ResultsFolder 'GA_erf.mat'], 'GA_erf');
+save([ResultsFolder 'GA_individuals.mat'], 'GA_indi');
 
 % multiplot
 load([ResultsFolder 'lay.mat']);
@@ -284,7 +290,7 @@ load([ResultsFolder 'GA_erf_allConditions.mat']); % only required if using ft_to
 
 % use a nice-looking colourmap
 ft_hastoolbox('brewermap', 1); % ensure this toolbox is on the path
-colours = colormap(flipud(brewermap(64, 'RdBu')));
+cmap = colormap(flipud(brewermap(64, 'RdBu')));
 
 % select which comparison to plot
 stat = target_lang; % here we plot the only effect that seems to survive correction (at minnbchan = 0)
@@ -302,7 +308,7 @@ cfg.highlightcolorpos = [1 1 1]; % white for pos clusters
 cfg.highlightcolorneg = [255/255 192/255 203/255]; % pink for neg clusters
 cfg.alpha = 0.1; % any clusters with a p-value below this threshold will be plotted
 cfg.layout = lay;
-cfg.colormap = colours;
+cfg.colormap = cmap;
 
 % turn on the following lines if you are after one particular subplot
 %cfg.subplotsize = [1 1];

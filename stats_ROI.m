@@ -16,27 +16,10 @@
 
 clear all;
 
-% = Settings = %
-
-% Plot shaded patch around ROI time course? 
-% Options: 'no', 'SEM', 'STDEV', 'CI_95'
-% (note: SEM < 95% CI < STDEV)
-PLOT_SHADE = 'SEM';
-
-
-% colours for ROI plot (one colour for each condition):
-% Need to specify manually because we plot each cond separately, simply 
-% using default colourmap makes all lines the same colour
-colours = ['b', 'r', 'y', 'm', 'b', 'r', 'y', 'm'];
-
-% toolbox to plot shaded boundary around each timecourse (diff paths for diff computers)
-addpath(genpath('C:\Users\Judy\Documents\MATLAB\kakearney-boundedline-pkg-50f7e4b'));
-addpath(genpath('C:\Users\43606024\Documents\MATLAB\kakearney-boundedline-pkg-50f7e4b'));
-
-
 % run the #define section
 global conds_cue; global conds_target; global eventnames_8;
 global ResultsFolder_ROI; % all subjects' ROI data are stored here
+global PLOT_SHADE; global colours; % for plotting shaded boundary on each time course
 common();
 
 

@@ -1,25 +1,8 @@
 function MakeFigures_ROI_timeseries
 
-    % = Settings = %
-
-    % Plot shaded patch around ROI time course? 
-    % Options: 'no', 'SEM', 'STDEV', 'CI_95'
-    % (note: SEM < 95% CI < STDEV)
-    PLOT_SHADE = 'SEM';
-
-
-    % colours for ROI plot (one colour for each condition):
-    % Need to specify manually because we plot each cond separately, simply 
-    % using default colourmap makes all lines the same colour
-    colours = ['b', 'r', 'y', 'm', 'b', 'r', 'y', 'm'];
-
-    % toolbox to plot shaded boundary around each timecourse (diff paths for diff computers)
-    addpath(genpath('C:\Users\Judy\Documents\MATLAB\kakearney-boundedline-pkg-50f7e4b'));
-    addpath(genpath('C:\Users\43606024\Documents\MATLAB\kakearney-boundedline-pkg-50f7e4b'));
-
-
-    %% run the #define section to obtain values for global vars
+    % run the #define section to obtain values for global vars
     global ResultsFolder_ROI; 
+    global PLOT_SHADE; global colours; % for plotting shaded boundary on each time course
     common();
 
     temp = load([ResultsFolder_ROI 'GA.mat']);
@@ -49,13 +32,16 @@ function MakeFigures_ROI_timeseries
     ch_switchcost = ft_timelockbaseline(cfg, ch_switchcost); 
 
 
+    % if plotting shaded boundary, need to do the following:
     % collapse into 2 conditions, based on each individual subject's ROI time course
     % (these will be used to calc the shaded boundary around each line in the plot)
-    en_indi = GA_indi.(ROI_name).cueenstay;
-    en_indi.individual = GA_indi.(ROI_name).cueenswitch.individual - GA_indi.(ROI_name).cueenstay.individual;
-    ch_indi = GA_indi.(ROI_name).cuechstay;
-    ch_indi.individual = GA_indi.(ROI_name).cuechswitch.individual + GA_indi.(ROI_name).cuechstay.individual;
-
+    if ~strcmp(PLOT_SHADE, 'no')
+        en_indi = GA_indi.(ROI_name).cueenstay;
+        en_indi.individual = GA_indi.(ROI_name).cueenswitch.individual - GA_indi.(ROI_name).cueenstay.individual;
+        ch_indi = GA_indi.(ROI_name).cuechstay;
+        ch_indi.individual = GA_indi.(ROI_name).cuechswitch.individual + GA_indi.(ROI_name).cuechstay.individual;
+    end
+    
 
     % plot
     figure('Name', 'cue_interaction_LIFG_315-345ms'); hold on;
@@ -116,14 +102,17 @@ function MakeFigures_ROI_timeseries
     ch = ft_timelockbaseline(cfg, ch); 
 
 
+    % if plotting shaded boundary, need to do the following:
     % collapse into 2 conditions, based on each individual subject's ROI time course
     % (these will be used to calc the shaded boundary around each line in the plot)
-    en_indi = GA_indi.(ROI_name).targetenstay;
-    en_indi.individual = (GA_indi.(ROI_name).targetenstay.individual + GA_indi.(ROI_name).targetenswitch.individual) / 2;
-    ch_indi = GA_indi.(ROI_name).targetchstay;
-    ch_indi.individual = (GA_indi.(ROI_name).targetchstay.individual + GA_indi.(ROI_name).targetchswitch.individual) / 2;
+    if ~strcmp(PLOT_SHADE, 'no')
+        en_indi = GA_indi.(ROI_name).targetenstay;
+        en_indi.individual = (GA_indi.(ROI_name).targetenstay.individual + GA_indi.(ROI_name).targetenswitch.individual) / 2;
+        ch_indi = GA_indi.(ROI_name).targetchstay;
+        ch_indi.individual = (GA_indi.(ROI_name).targetchstay.individual + GA_indi.(ROI_name).targetchswitch.individual) / 2;
+    end
 
-
+    
     % plot
     figure('Name', 'target_lang_RIFG_200-235ms'); hold on;
 
