@@ -29,7 +29,7 @@ common();
 % load the results
 load([ResultsFolder 'stats.mat']);
 load([ResultsFolder 'lay.mat']);
-load([ResultsFolder 'GA_erf_allConditions.mat']);
+load([ResultsFolder 'GA_erf.mat']);
 load([ResultsFolder 'neighbours.mat']);
 
 % load nice colourmap
@@ -86,7 +86,7 @@ cfg.highlightchannel  = stat_output.label(ismember(stat_output.negclusterslabelm
 %}
 
 
-cfg.style             = 'straight';
+cfg.style             = 'straight'; % no contour lines, only the colour gradients
 cfg.comment           = 'no';
 cfg.gridscale         = 512;
 cfg.marker            = 'off'; % show the location of all channels?
@@ -151,7 +151,12 @@ cfg.xlim = [start_time end_time]; % duration of the effect (as reported by ft_cl
 cfg.layout = lay;
 cfg.colormap = cmap;
 cfg.colorbar = 'yes';
-cfg.comment = 'no';
+
+cfg.style             = 'straight'; % no contour lines, only the colour gradients
+cfg.feedback          = 'no'; % necessary to specify this when cfg.style = 'straight', otherwise errors!!
+cfg.comment           = 'no';
+cfg.gridscale         = 512;
+cfg.marker            = 'off'; % show the location of all channels?
 
 ft_topoplotER(cfg, planarComb);
 set(gca,'fontsize',22); % set colorbar fontsize
