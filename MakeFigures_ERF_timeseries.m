@@ -103,7 +103,7 @@ else
     boundedline(ch.time, ch_avg, margin_ch(:), 'alpha', 'transparency',0.15, colours(2));        
 end
 
-xlim([-0.1 0.75]);
+xlim([-0.1 0.55]);
 ylim([-7e-15 7e-15]);
 xlabel('Seconds');
 ylabel('Tesla');

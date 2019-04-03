@@ -128,7 +128,7 @@ function MakeFigures_ROI_timeseries
         boundedline(ch.time, ch.avg, margin_ch(:), 'alpha', 'transparency',0.15, colours(2));        
     end
 
-    xlim([-0.1 0.75]);
+    xlim([-0.1 0.55]);
     xlabel('Seconds');
     ylabel('Ampere per square metre');
     set(gca, 'LineWidth',1.5, 'FontSize',22); % set axes properties
