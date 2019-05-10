@@ -55,5 +55,9 @@ function [] = common()
     % toolbox to plot shaded boundary around each timecourse (diff paths for diff computers)
     addpath(genpath('C:\Users\Judy\Documents\MATLAB\kakearney-boundedline-pkg-50f7e4b'));
     addpath(genpath('C:\Users\43606024\Documents\MATLAB\kakearney-boundedline-pkg-50f7e4b'));
+    
+    % toolbox to save figure exactly as it appears on screen
+    addpath(genpath('C:\Users\Judy\Documents\MATLAB\altmany-export_fig-9676767'));
+    addpath(genpath('C:\Users\43606024\Documents\MATLAB\altmany-export_fig-9676767'));
 
 end
