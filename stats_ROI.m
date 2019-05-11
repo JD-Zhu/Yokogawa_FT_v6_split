@@ -320,6 +320,9 @@ for i = 1:length(stats_names) % each cycle handles one effect (e.g. cue_lang)
                 % for these plots, we want to delete the legends
                 hl = findobj(gcf, 'type','legend');
                 delete(hl);
+                
+                % maximise the figure before saving
+                %set(gcf, 'Position', get(0, 'Screensize'));
 
                 filename = [ROI_name '_' stat_name(1:3) '.png'];
                 %saveas(gcf, [ResultsFolder_ROI 'Figures\\non-sig\\' filename]); % this fn does not maintain the aspect ratio, font size, etc
@@ -374,6 +377,9 @@ for i = 1:length(stats_names) % each cycle handles one effect (e.g. cue_lang)
                     ylim(ylimits); % ensure ylim doesn't get expanded
                 end
 
+                % maximise the figure before saving
+                %set(gcf, 'Position', get(0, 'Screensize'));
+                
                 % save the figure
                 filename = [ROI_name '_' stat_name '.png'];
                 %saveas(gcf, [ResultsFolder_ROI 'Figures\\' filename]); % this fn does not maintain the aspect ratio, font size, etc
