@@ -1,7 +1,10 @@
-%%TODO: we want to plot cue-locked GFP (avg across subjects, across all sensors) for the 4 faces.
-% This is a separate copy - feel free to change anythign in thiss script.
+% This script does GA & stats for the VEFs (control exp).
+% Main purpose: plot cue-locked GFP (avg across subjects, across all sensors) for the 4 faces.
+% Note: lots of code below are irrelevant - they were carried over from the
+% main-exp's stats_ERF.m
 
 
+%%
 %close all;
 %clear all;
 
@@ -19,44 +22,45 @@ AVGOVERTIME = false;
 
 %%
 % run the #define section
-global conds_cue; global conds_target; global eventnames_8;
-global ResultsFolder; % all subjects' erf data are stored here
-global filename_suffix; % erf results file suffix
-common();
+%global conds_cue; global conds_target; global eventnames;
+%global filename_suffix; % erf results file suffix
+%common();
+ResultsFolder = '..\\..\\vep_results_ERF\\'; % all subjects' erf data are stored here
+
 
 
 % initialise allSubjects_erf (each field holds all subjects' erf in that condition)
-allSubjects_erf.cuechstay = {};
-allSubjects_erf.cuechswitch = {};
-allSubjects_erf.cueenstay = {};
-allSubjects_erf.cueenswitch = {};
+allSubjects_erf.chnfemale = {};
+allSubjects_erf.chnmale = {};
+allSubjects_erf.engfemale = {};
+allSubjects_erf.engmale = {};
 
-allSubjects_erf.targetchstay = {};
-allSubjects_erf.targetchswitch = {};
-allSubjects_erf.targetenstay = {};
-allSubjects_erf.targetenswitch = {};
+%allSubjects_erf.targetchstay = {};
+%allSubjects_erf.targetchswitch = {};
+%allSubjects_erf.targetenstay = {};
+%allSubjects_erf.targetenswitch = {};
 
 
 
 %% Read data
 
 % find all .mat files in ResultsFolder
-files = dir([ResultsFolder '*_erf' filename_suffix '.mat']);
+files = dir([ResultsFolder '*_erf.mat']);
 
 % each cycle reads in one '.mat' file (ie. one subject's erf data)
 for i = 1:length(files)
     filename = [ResultsFolder files(i).name];
     load(filename);
         
-    for j = 1:length(eventnames_8) % 4 conditions in cue & 4 conditions in target (total 8)
+    for j = 1:length(eventnames) % 4 conditions in cue & 4 conditions in target (total 8)
         % perform channel repair if needed
         if (CHANNEL_REPAIR == true)
             load([ResultsFolder 'neighbours.mat']);
             load([ResultsFolder 'all_labels.mat']);
-            erf_clean.(eventnames_8{j}) = repair_bad_channels(erf_clean.(eventnames_8{j}), neighbours, all_labels);
+            erf_clean.(eventnames{j}) = repair_bad_channels(erf_clean.(eventnames{j}), neighbours, all_labels);
         end
         % add to allsubjects matrix
-        allSubjects_erf.(eventnames_8{j}) = [allSubjects_erf.(eventnames_8{j}) erf_clean.(eventnames_8{j})];
+        allSubjects_erf.(eventnames{j}) = [allSubjects_erf.(eventnames{j}) erf_clean.(eventnames{j})];
     end
     
     % save the new erf after channel repair
@@ -76,12 +80,12 @@ cfg = [];
 cfg.channel   = {'all', '-AG083', '-AG087', '-AG088', '-AG082', '-AG084', '-AG086', '-AG081', '-AG085', '-AG089'}; % remove sensors suffering from high-freq noise & trigger leaks
 cfg.latency   = 'all';
 cfg.parameter = 'avg';
-for j = 1:length(eventnames_8)
+for j = 1:length(eventnames)
     cfg.keepindividual = 'no'; % average across subjects
-    GA_erf.(eventnames_8{j}) = ft_timelockgrandaverage(cfg, allSubjects_erf.(eventnames_8{j}){:});  
+    GA_erf.(eventnames{j}) = ft_timelockgrandaverage(cfg, allSubjects_erf.(eventnames{j}){:});  
 
     cfg.keepindividual = 'yes'; % do not average across subjects, keep the data for each individual subject
-    GA_indi.(eventnames_8{j}) = ft_timelockgrandaverage(cfg, allSubjects_erf.(eventnames_8{j}){:}); 
+    GA_indi.(eventnames{j}) = ft_timelockgrandaverage(cfg, allSubjects_erf.(eventnames{j}){:}); 
 
     % "{:}" means to use data from all elements of the variable
 end
@@ -100,40 +104,50 @@ cfg.baseline     = [-0.1 0];
 cfg.baselinetype = 'absolute';
 
 % cue
-figure('Name','ft_multiplotER: GA_erf.cuechstay, GA_erf.cuechsw, GA_erf.cueenstay, GA_erf.cueensw');
-ft_multiplotER(cfg, GA_erf.cuechstay, GA_erf.cuechswitch, GA_erf.cueenstay, GA_erf.cueenswitch);
-legend(eventnames_8(conds_cue));
+figure('Name','ft_multiplotER: GA_erf.chnfemale, GA_erf.chnmale, GA_erf.engfemale, GA_erf.engmale');
+ft_multiplotER(cfg, GA_erf.chnfemale, GA_erf.chnmale, GA_erf.engfemale, GA_erf.engmale);
+legend(eventnames);
 
+%{
 % target
 figure('Name','ft_multiplotER: GA_erf.targetchstay, GA_erf.targetchsw, GA_erf.targetenstay, GA_erf.targetensw');
 ft_multiplotER(cfg, GA_erf.targetchstay, GA_erf.targetchswitch, GA_erf.targetenstay, GA_erf.targetenswitch);
-legend(eventnames_8(conds_target));
-
+legend(eventnames);
+%}
 
 % CALCULATE global averages across all sensors (i.e. GFP = global field power)
 cfg        = [];
 cfg.method = 'power';
 %cfg.channel = {'AG017', 'AG018', 'AG019', 'AG022', 'AG023', 'AG025', 'AG029', 'AG063', 'AG064', 'AG143'}; % 10 sig channels in cluster
-for j = 1:length(eventnames_8)
-    GA_erf_GFP.(eventnames_8{j}) = ft_globalmeanfield(cfg, GA_erf.(eventnames_8{j}));
+for j = 1:length(eventnames)
+    GA_erf_GFP.(eventnames{j}) = ft_globalmeanfield(cfg, GA_erf.(eventnames{j}));
 end
 
+% ### This is the plot we want ###
 % plot GFP for cue-locked 
 figure('Name','GFP_cue'); hold on
-for j = conds_cue
-    plot(GA_erf_GFP.(eventnames_8{j}).time, GA_erf_GFP.(eventnames_8{j}).avg);
-    xlim([-0.1 0.75]);
+for j = 1:length(eventnames)
+    plot(GA_erf_GFP.(eventnames{j}).time, GA_erf_GFP.(eventnames{j}).avg, 'Linewidth',3);
+    xlim([-0.1 0.5]); % we only epoched -500 ~ 500ms
 end
-legend(eventnames_8(conds_cue));
+legend({'Chinese female', 'Chinese male', 'Caucasian female', 'Caucasian male'}, 'Location','northwest', 'FontSize',30);
+
+% set properties for axes, lines, and text
+xlabel('Seconds');
+ylabel('Global field power (Tesla squared)');
+set(gca, 'LineWidth',1.5, 'FontSize',22); % set axes properties
+box on; % draw a border around the figure
+
 
 % plot GFP for target-locked 
+%{
 figure('Name','GFP_target'); hold on
 for j = conds_target
-    plot(GA_erf_GFP.(eventnames_8{j}).time, GA_erf_GFP.(eventnames_8{j}).avg);
+    plot(GA_erf_GFP.(eventnames{j}).time, GA_erf_GFP.(eventnames{j}).avg);
     xlim([-0.1 0.75]);
 end
-legend(eventnames_8(conds_target));
-
+legend(eventnames(conds_target));
+%}
 
 % average across all 4 conds (for selecting windows for peaks)
 %{
@@ -427,7 +441,7 @@ cfg.channel = stat.label(find(cue_ttype.mask)); % autoly retrieve sig channels (
 
 figure('Name','Average ERF of significant channels - cue window');
 ft_singleplotER(cfg, GA_erf.cuechstay, GA_erf.cuechswitch, GA_erf.cueenstay, GA_erf.cueenswitch);
-legend(eventnames_8(conds_cue));
+legend(eventnames(conds_cue));
 xlim([-0.1 0.75]);
 
 % if doing avgovertime, plot vertical lines to indicate the time window
@@ -443,7 +457,7 @@ cfg.channel = stat.label(find(target_ttype.mask)); % autoly retrieve sig channel
 
 figure('Name','Average ERF of significant channels - target window');
 ft_singleplotER(cfg, GA_erf.targetchstay, GA_erf.targetchswitch, GA_erf.targetenstay, GA_erf.targetenswitch);
-legend(eventnames_8(conds_target));
+legend(eventnames(conds_target));
 xlim([-0.1 0.75]);
 
 % if doing avgovertime, plot vertical lines to indicate the time window
