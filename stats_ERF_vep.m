@@ -8,6 +8,9 @@
 %close all;
 %clear all;
 
+% addpath to access custom functions in all subfolders
+addpath(genpath(pwd));
+
 
 % = Settings =
 % Please adjust as required:
@@ -183,8 +186,8 @@ if (AVGOVERTIME)
                             % (useful when you want to look at a particular component, e.g. to look at M100,
                             % cfg.latency = [0.08 0.12]; cfg.avgovertime = 'yes'; )
 else % autoly detect temporal cluster
-    latency_cue = [-0.1 0.75]; % time interval over which the experimental 
-    latency_target = [-0.1 0.75]; %conditions must be compared (in seconds)
+    latency_cue = [-0.1 0.5]; % time interval over which the experimental 
+    latency_target = [-0.1 0.5]; %conditions must be compared (in seconds)
     cfg.avgovertime = 'no';
 end
 
@@ -202,7 +205,7 @@ cfg.minnbchan = 2; % minimum number of neighbourhood channels required to be sig
 
 cfg.tail = 0;
 cfg.clustertail = 0; % 2 tailed test
-cfg.alpha = 0.1; %0.001  % threshold for cluster-level statistics (any cluster with a p-value lower than this will be reported as sig - an entry of '1' in .mask field)
+cfg.alpha = 0.05; %0.001  % threshold for cluster-level statistics (any cluster with a p-value lower than this will be reported as sig - an entry of '1' in .mask field)
 cfg.correcttail = 'prob'; % correct for 2-tailedness
 cfg.numrandomization = 2000; % Rule of thumb: use 500, and double this number if it turns out 
     % that the p-value differs from the chosen alpha (e.g. 0.05) by less than 0.02
@@ -235,6 +238,8 @@ for i = 1:numSubjects
     allSubj_target_en_switchCost{i}.avg = allSubjects_erf.targetenswitch{i}.avg - allSubjects_erf.targetenstay{i}.avg; % enswitch - enstay
 end
 %}
+
+%{
 % manual calculation above is now replaced by combine_conds_for_T_Test()
 fprintf('\nCUE window -> Testing lang x ttype interaction:\n');
 [timelock1, timelock2] = combine_conds_for_T_test('fieldtrip', 'interaction', data.cuechstay, data.cuechswitch, data.cueenstay, data.cueenswitch);
@@ -244,8 +249,9 @@ fprintf('\nTARGET window -> Testing lang x ttype interaction:\n');
 [timelock1, timelock2] = combine_conds_for_T_test('fieldtrip', 'interaction', data.targetchstay, data.targetchswitch, data.targetenstay, data.targetenswitch); %'2-1 vs 4-3');
 cfg.latency = latency_target; % time interval over which the experimental 
 [target_interaction] = ft_timelockstatistics(cfg, timelock1{:}, timelock2{:}); %allSubj_target_ch_switchCost{:}, allSubj_target_en_switchCost{:});
+%}
 
-% Main effect of lang (collapse across stay-switch)
+% Main effect of lang (collapse across genders)
 %{
 for i = 1:numSubjects
     allSubj_cue_ch{i} = allSubjects_erf.cuechstay{i};
@@ -259,14 +265,15 @@ for i = 1:numSubjects
 end
 %}
 fprintf('\nCUE window -> Main effect of lang:\n');
-[timelock1, timelock2] = combine_conds_for_T_test('fieldtrip', 'main_12vs34', data.cuechstay, data.cuechswitch, data.cueenstay, data.cueenswitch);
+[timelock1, timelock2] = combine_conds_for_T_test('fieldtrip', 'main_12vs34', data.chnfemale, data.chnmale, data.engfemale, data.engmale);
 cfg.latency = latency_cue; % time interval over which the experimental 
 [cue_lang] = ft_timelockstatistics(cfg, timelock1{:}, timelock2{:}); %allSubj_cue_ch{:}, allSubj_cue_en{:});
+%{
 fprintf('\nTARGET window -> Main effect of lang:\n');
 [timelock1, timelock2] = combine_conds_for_T_test('fieldtrip', 'main_12vs34', data.targetchstay, data.targetchswitch, data.targetenstay, data.targetenswitch); %'2-1 vs 4-3');
 cfg.latency = latency_target; % time interval over which the experimental 
 [target_lang] = ft_timelockstatistics(cfg, timelock1{:}, timelock2{:}); %allSubj_target_ch{:}, allSubj_target_en{:});
-
+%}
 % Main effect of switch (collapse across langs)
 %{
 for i = 1:numSubjects
@@ -279,7 +286,7 @@ for i = 1:numSubjects
     allSubj_target_switch{i} = allSubjects_erf.targetchswitch{i};
     allSubj_target_switch{i}.avg = (allSubjects_erf.targetchswitch{i}.avg + allSubjects_erf.targetenswitch{i}.avg) / 2;
 end
-%}
+
 fprintf('\nCUE window -> Main effect of ttype:\n');
 [timelock1, timelock2] = combine_conds_for_T_test('fieldtrip', 'main_13vs24', data.cuechstay, data.cuechswitch, data.cueenstay, data.cueenswitch);
 cfg.latency = latency_cue; % time interval over which the experimental 
@@ -288,16 +295,17 @@ fprintf('\nTARGET window -> Main effect of ttype:\n');
 [timelock1, timelock2] = combine_conds_for_T_test('fieldtrip', 'main_13vs24', data.targetchstay, data.targetchswitch, data.targetenstay, data.targetenswitch); %'2-1 vs 4-3');
 cfg.latency = latency_target; % time interval over which the experimental 
 [target_ttype] = ft_timelockstatistics(cfg, timelock1{:}, timelock2{:}); %allSubj_target_stay{:}, allSubj_target_switch{:});
+%}
 
 % check for effects by searching the .mask field
-effect_cue_interaction = length(find(cue_interaction.mask)) % if not 0, then we have an effect here
+%effect_cue_interaction = length(find(cue_interaction.mask)) % if not 0, then we have an effect here
 effect_cue_lang = length(find(cue_lang.mask))
-effect_cue_ttype = length(find(cue_ttype.mask))
-effect_target_interaction = length(find(target_interaction.mask))
-effect_target_lang = length(find(target_lang.mask))
-effect_target_ttype = length(find(target_ttype.mask))
+%effect_cue_ttype = length(find(cue_ttype.mask))
+%effect_target_interaction = length(find(target_interaction.mask))
+%effect_target_lang = length(find(target_lang.mask))
+%effect_target_ttype = length(find(target_ttype.mask))
 
-%save([ResultsFolder 'stats.mat'], 'cue_interaction', 'cue_lang', 'cue_ttype', 'target_interaction', 'target_lang', 'target_ttype');
+save([ResultsFolder 'stats.mat'], 'cue_lang');
 
 
 %% Plotting: use ft_clusterplot & ft_topoplot
