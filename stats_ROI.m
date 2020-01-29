@@ -14,12 +14,12 @@
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-clear all;
+%clear all;
 
 % run the #define section
 global conds_cue; global conds_target; global eventnames_8;
 global ResultsFolder_ROI; % all subjects' ROI data are stored here
-global PLOT_SHADE; global colours; % for plotting shaded boundary on each time course
+global PLOT_SHADE; global colours; global linespecs; % for plotting shaded boundary on each time course
 common();
 
 
@@ -260,7 +260,14 @@ for i = 1:length(stats_names) % each cycle handles one effect (e.g. cue_lang)
                         margin = calc_margin(allsubjects, PLOT_SHADE);
                         
                         % plot time course with shaded boundary
-                        boundedline(GA.(ROI_name).(eventnames_8{j}).time, GA.(ROI_name).(eventnames_8{j}).avg, margin(:), 'alpha', 'transparency',0.15, colours(j));                        
+                        boundedline(GA.(ROI_name).(eventnames_8{j}).time, GA.(ROI_name).(eventnames_8{j}).avg, ...
+                                margin(:), 'alpha', 'transparency',0.15, linespecs{j}, 'cmap',colours(j,:)); 
+                                % Notes: (1) we retrieve each individual colour from the colour list, then pass it into 
+                                % boundedline(), because we call boundedline() separately for each cond.
+                                % using a colourmap will make all conds the same colour (i.e. only the 1st colour is read every time).   
+                                % (2) you can also specify colour in the "linespecs", e.g. '--r' (dashed red line),
+                                % but if "cmap" is also specified, the colour in "cmap" takes priority.
+                                % we use "cmap" here so that we can specify customised colours (in linespecs u can only use the 8 default colours)
                     end
                 end
                 
@@ -276,7 +283,8 @@ for i = 1:length(stats_names) % each cycle handles one effect (e.g. cue_lang)
                         margin = calc_margin(allsubjects, PLOT_SHADE);
 
                         % plot time course with shaded boundary
-                        boundedline(GA.(ROI_name).(eventnames_8{j}).time, GA.(ROI_name).(eventnames_8{j}).avg, margin(:), 'alpha', 'transparency',0.15, colours(j));
+                        boundedline(GA.(ROI_name).(eventnames_8{j}).time, GA.(ROI_name).(eventnames_8{j}).avg, ...
+                                margin(:), 'alpha', 'transparency',0.15, linespecs{j}, 'cmap',colours(j,:)); 
                     end                    
                 end
                 
@@ -294,11 +302,15 @@ for i = 1:length(stats_names) % each cycle handles one effect (e.g. cue_lang)
             box on; % draw a border around the figure
 
             % specify the legend manually (otherwise it will include
-            % each shaded patch as an item too). For some reason,
-            % the order of the lines are reversed when you grab them
+            % each shaded patch as an item too). 
+            % For some reason, the order of the lines are reversed 
+            % when you grab them, so we need to flip the array
             lines = findall(gcf, 'Type','line');
-            legend([lines(4) lines(3) lines(2) lines(1)], {'Mandarin (L1) stay', 'Mandarin (L1) switch', 'English (L2) stay', 'English (L2) switch'}, 'Location','northwest', 'FontSize',30);
+            lines = flip(lines);
             set(lines, 'Linewidth',3); % line thickness
+            legend(lines, {'Stay in Mandarin (L1)', 'Switch to Mandarin (L1)', ...
+                           'Stay in English (L2)', 'Switch to English (L2)'}, ...
+                           'Location','northwest', 'FontSize',30);
                 
             % reference code:
             %{

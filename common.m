@@ -46,11 +46,19 @@ function [] = common()
     global PLOT_SHADE;
     PLOT_SHADE = 'SEM';
 
-    % colours for time course plots (one colour for each condition):
-    % need to specify manually because we plot each cond separately, and simply 
-    % using default colourmap makes all lines the same colour when calling boundedline()
+    % colours for time course plots (one colour for each condition)
     global colours;
-    colours = ['b', 'r', 'y', 'm', 'b', 'r', 'y', 'm'];
+    %colours = ['b', 'r', 'y', 'm', 'b', 'r', 'y', 'm'];
+    colours =  [1 0 0;          % red (Chn stay)
+                1 0.674 0.235;  % orange (Chn sw)
+                0 0 1;          % blue (Eng stay)
+                0 1 1;];        % cyan (Eng sw)
+    colours = [colours; colours];
+    
+    % linetypes for time course plots (stay == solid line, switch == dotted line)
+    global linespecs;
+    linespecs = {'-', ':', '-', ':'}; % Chn stay, Chn sw, Eng stay, Eng sw
+    linespecs = [linespecs linespecs]; % repeat: first 4 for cue window (conds 1-4), next 4 for target window (conds 5-8)
 
     % toolbox to plot shaded boundary around each timecourse (diff paths for diff computers)
     addpath(genpath('C:\Users\Judy\Documents\MATLAB\kakearney-boundedline-pkg-50f7e4b'));
