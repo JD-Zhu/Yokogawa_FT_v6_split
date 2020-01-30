@@ -52,7 +52,7 @@ function [] = common()
     colours =  [1 0 0;          % red (Chn stay)
                 1 0.674 0.235;  % orange (Chn sw)
                 0 0 1;          % blue (Eng stay)
-                0 1 1;];        % cyan (Eng sw)
+                0 0.8 1;];      % cyan (Eng sw)
     colours = [colours; colours];
     
     % linetypes for time course plots (stay == solid line, switch == dotted line)
